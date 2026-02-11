@@ -43,9 +43,9 @@ export default function ArtworkDetailPage() {
 
   // Format price
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'ZAR',
       minimumFractionDigits: 0,
     }).format(price);
   };

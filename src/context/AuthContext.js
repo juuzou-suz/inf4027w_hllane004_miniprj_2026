@@ -15,6 +15,7 @@ import {
 
 // Import our Firebase auth instance
 import { auth } from '@/lib/firebase';
+import { getUserById } from '@/lib/firestore';
 
 // Create the Context
 // This is like creating an empty "storage box" that will hold our auth data
@@ -36,17 +37,28 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // onAuthStateChanged listens for login/logout events
     // Firebase automatically calls this function whenever auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // User is logged in
-        // Store user info in state
-        setUser({
-          uid: user.uid,           // Unique user ID
-          email: user.email,       // User's email
-          displayName: user.displayName, // User's name (optional)
-        });
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+       // Fetch user data from Firestore to get role
+        try {
+          const userData = await getUserById(firebaseUser.uid);
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            role: userData?.role || 'customer', // Get role from Firestore
+          });
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          // Fallback if Firestore fetch fails
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            role: 'customer',
+          });
+        }
       } else {
-        // User is logged out
         setUser(null);
       }
       
@@ -97,7 +109,6 @@ export function useAuth() {
   if (context === undefined) {
     throw new Error('useAuth must be used within AuthProvider');
   }
-  
   return context;
 }
 

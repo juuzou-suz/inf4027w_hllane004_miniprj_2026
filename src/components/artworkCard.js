@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function ArtworkCard({ artwork }) {
-  // Format price as USD currency
+  // Format price as ZAR currency
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
