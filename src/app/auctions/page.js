@@ -221,12 +221,13 @@ export default function AuctionsPage() {
                     </div>
 
                     {/* Action Button */}
-                    <Link
-                      href={`/auctions/${auction.id}`}
-                      className="block w-full bg-purple-600 text-white text-center px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
-                    >
-                      {auction.status === 'live' ? 'Bid Now' : 'View Details'}
-                    </Link>
+                   {/* Action Button */}
+<Link
+  href={`/auctions/${auction.id}`}
+  className="block w-full bg-purple-600 text-white text-center px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+>
+  {auction.status === 'live' ? 'View Auction' : 'View Details'}
+</Link>
                   </div>
                 </div>
               ))}

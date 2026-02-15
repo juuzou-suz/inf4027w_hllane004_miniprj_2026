@@ -221,6 +221,7 @@ export default function EditArtworkPage() {
               onChange={handleChange}
               min="1900"
               max={new Date().getFullYear()}
+              autoComplete="off"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
@@ -318,6 +319,7 @@ export default function EditArtworkPage() {
               onChange={handleChange}
               min="0"
               step="0.1"
+              autoComplete="off"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
@@ -333,6 +335,7 @@ export default function EditArtworkPage() {
               onChange={handleChange}
               min="0"
               step="0.1"
+              autoComplete="off"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
@@ -348,6 +351,7 @@ export default function EditArtworkPage() {
               onChange={handleChange}
               min="0"
               step="0.1"
+              autoComplete="off"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
@@ -365,6 +369,7 @@ export default function EditArtworkPage() {
               required
               min="10"
               step="10"
+              autoComplete="off"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>

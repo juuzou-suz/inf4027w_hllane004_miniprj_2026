@@ -1,17 +1,10 @@
-'use client'; // This runs in the browser (needed for forms and useState)
+'use client'; 
 
-// Import React hooks
 import { useState } from 'react';
-
-// Import Next.js navigation
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-
-// Import Firebase authentication functions
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-
-// Import our Firebase instances
 import { auth, db } from '@/lib/firebase';
 
 export default function RegisterPage() {
@@ -26,6 +19,9 @@ export default function RegisterPage() {
   // UI state - controls loading and error messages
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
 
   // Handle form submission
   const handleRegister = async (e) => {
@@ -69,7 +65,7 @@ export default function RegisterPage() {
       });
 
       // Success! Redirect to homepage
-      router.push('/');
+      router.push(redirectUrl);
 
     } catch (error) {
       // Handle errors
@@ -183,15 +179,12 @@ export default function RegisterPage() {
         </form>
 
         {/* Login Link */}
-        <p className="text-center text-gray-600 mt-6">
-          Already have an account?{' '}
-          <Link 
-            href="/login" 
-            className="text-purple-600 font-semibold hover:underline"
-          >
-            Log in
-          </Link>
-        </p>
+<Link 
+  href={`/login${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
+  className="text-purple-600 font-semibold hover:underline"
+>
+  Log in
+</Link>
       </div>
     </div>
   );

@@ -1,38 +1,67 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getArtworkById } from '@/lib/firestore';
+import { useAuth } from '@/context/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function ArtworkDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const artworkId = params.id;
 
   // State
   const [artwork, setArtwork] = useState(null);
+  const [auction, setAuction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch artwork when page loads
+  // Fetch artwork and check if it's in an auction
   useEffect(() => {
     if (artworkId) {
-      fetchArtwork();
+      fetchArtworkAndAuction();
     }
   }, [artworkId]);
 
-  const fetchArtwork = async () => {
+  const fetchArtworkAndAuction = async () => {
     try {
       setLoading(true);
-      const data = await getArtworkById(artworkId);
       
-      if (!data) {
+      // Fetch artwork
+      const artworkData = await getArtworkById(artworkId);
+      
+      if (!artworkData) {
         setError('Artwork not found');
-      } else {
-        setArtwork(data);
-        setError('');
+        setLoading(false);
+        return;
       }
+
+      setArtwork(artworkData);
+
+      // Check if artwork is in any auction
+      const auctionsQuery = query(
+        collection(db, 'auctions'),
+        where('artworkId', '==', artworkId)
+      );
+      const auctionSnapshot = await getDocs(auctionsQuery);
+      
+      if (!auctionSnapshot.empty) {
+        // Find active auction (live or upcoming)
+        const activeAuction = auctionSnapshot.docs.find(doc => {
+          const data = doc.data();
+          return data.status === 'live' || data.status === 'upcoming';
+        });
+
+        if (activeAuction) {
+          setAuction({ id: activeAuction.id, ...activeAuction.data() });
+        }
+      }
+
+      setError('');
     } catch (err) {
       console.error('Error fetching artwork:', err);
       setError('Failed to load artwork details.');
@@ -70,6 +99,30 @@ export default function ArtworkDetailPage() {
       archived: 'Archived',
     };
     return labels[status] || status;
+  };
+
+  // Handle Add to Cart
+  const handleAddToCart = () => {
+    if (!user) {
+      // Redirect to login with return URL
+      router.push(`/login?redirect=/artworks/${artworkId}`);
+      return;
+    }
+
+    // TODO: Implement cart functionality (Week 3)
+    alert('Cart functionality coming soon! For now, this artwork has been "added to cart".');
+  };
+
+  // Handle auction button click
+  const handleAuctionClick = () => {
+    if (!user) {
+      // Redirect to login with return URL to auction page
+      router.push(`/login?redirect=/auctions/${auction.id}`);
+      return;
+    }
+
+    // Redirect to auction page
+    router.push(`/auctions/${auction.id}`);
   };
 
   // Loading state
@@ -131,9 +184,21 @@ export default function ArtworkDetailPage() {
               />
               {/* Status Badge */}
               <div className="absolute top-4 right-4">
-                <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(artwork.status)}`}>
-                  {getStatusLabel(artwork.status)}
-                </span>
+                {auction ? (
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                    auction.status === 'live' ? 'bg-red-100 text-red-800' :
+                    auction.status === 'upcoming' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {auction.status === 'live' ? '🔴 Live Auction' :
+                     auction.status === 'upcoming' ? '📅 Upcoming Auction' :
+                     '⏹️ Auction Ended'}
+                  </span>
+                ) : (
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(artwork.status)}`}>
+                    {getStatusLabel(artwork.status)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -148,27 +213,42 @@ export default function ArtworkDetailPage() {
               by {artwork.artist}
             </p>
 
-            {/* Price */}
+            {/* Price Box */}
             <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 mb-8">
-              {artwork.currentBid ? (
+              {auction ? (
+                // In Auction - Show Current Bid
                 <div>
                   <div className="text-sm text-purple-700 font-medium mb-2">
                     Current Bid
                   </div>
                   <div className="text-4xl font-bold text-purple-600">
-                    {formatPrice(artwork.currentBid)}
+                    {formatPrice(auction.currentBid)}
                   </div>
                   <div className="text-sm text-gray-600 mt-2">
-                    Starting bid: {formatPrice(artwork.startingBid)}
+                    Starting bid: {formatPrice(auction.startingBid)}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {auction.bidCount || 0} {auction.bidCount === 1 ? 'bid' : 'bids'}
+                  </div>
+                </div>
+              ) : artwork.price ? (
+                // Not in Auction - Show Regular Price
+                <div>
+                  <div className="text-sm text-purple-700 font-medium mb-2">
+                    Price
+                  </div>
+                  <div className="text-4xl font-bold text-purple-600">
+                    {formatPrice(artwork.price)}
                   </div>
                 </div>
               ) : (
+                // Fallback if no price set
                 <div>
                   <div className="text-sm text-purple-700 font-medium mb-2">
                     Starting Bid
                   </div>
                   <div className="text-4xl font-bold text-purple-600">
-                    {formatPrice(artwork.startingBid)}
+                    {formatPrice(artwork.startingBid || 0)}
                   </div>
                 </div>
               )}
@@ -232,20 +312,35 @@ export default function ArtworkDetailPage() {
               </div>
             )}
 
-            {/* Action Button */}
-            {artwork.status === 'in_auction' && (
-              <Link
-                href={`/auctions/${artwork.id}`}
+            {/* Action Buttons */}
+            {auction ? (
+              // Artwork is in auction
+              <button
+                onClick={handleAuctionClick}
                 className="block w-full bg-purple-600 text-white text-center px-6 py-4 rounded-lg hover:bg-purple-700 transition font-semibold text-lg"
               >
-                View Live Auction
-              </Link>
-            )}
-
-            {artwork.status === 'available' && (
-              <div className="text-center p-6 bg-green-50 rounded-lg">
-                <p className="text-green-800 font-medium">
-                  This artwork will be available in upcoming auctions
+                {auction.status === 'live' ? '🔴 Bid Now' : 
+                 auction.status === 'upcoming' ? '📅 View Auction Details' : 
+                 '⏹️ View Auction Results'}
+              </button>
+            ) : artwork.status === 'available' && artwork.price ? (
+              // Artwork available for purchase (not in auction)
+              <button
+                onClick={handleAddToCart}
+                className="block w-full bg-green-600 text-white text-center px-6 py-4 rounded-lg hover:bg-green-700 transition font-semibold text-lg"
+              >
+                🛒 Add to Cart
+              </button>
+            ) : artwork.status === 'sold' ? (
+              <div className="text-center p-6 bg-gray-50 rounded-lg">
+                <p className="text-gray-800 font-medium">
+                  This artwork has been sold
+                </p>
+              </div>
+            ) : (
+              <div className="text-center p-6 bg-yellow-50 rounded-lg">
+                <p className="text-yellow-800 font-medium">
+                  This artwork is currently unavailable
                 </p>
               </div>
             )}

@@ -8,10 +8,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
+{/* Hero Section */}
+<section className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-20">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
               Discover Art.
               <br />
@@ -23,73 +23,9 @@ export default function Home() {
               Connect with emerging artists through live online auctions.
               Experience the thrill of competitive bidding from anywhere in the world.
             </p>
-
-            {user ? (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="/artworks"
-                  className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition font-semibold text-lg"
-                >
-                  Browse Artworks
-                </Link>
-                <Link
-                  href="/auctions"
-                  className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-gray-50 transition font-semibold text-lg border-2 border-purple-600"
-                >
-                  View Live Auctions
-                </Link>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="/register"
-                  className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition font-semibold text-lg"
-                >
-                  Get Started Free
-                </Link>
-                <Link
-                  href="/artworks"
-                  className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-gray-50 transition font-semibold text-lg border-2 border-purple-600"
-                >
-                  Explore Artworks
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="bg-white py-16 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">
-                20+
-              </div>
-              <div className="text-gray-600">
-                Curated Artworks
-              </div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">
-                Real-Time
-              </div>
-              <div className="text-gray-600">
-                Live Bidding
-              </div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">
-                100%
-              </div>
-              <div className="text-gray-600">
-                Transparent Auctions
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    </div>
+  </div>
+</section>
 
       {/* Features Section */}
       <section className="py-20 bg-gray-50">
@@ -147,61 +83,36 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+</section>
 
-      {/* How It Works Section */}
-      <section className="py-20 bg-white">
+
+      {/* Stats Section */}
+      <section className="bg-white py-16 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              How It Works
-            </h2>
-            <p className="text-xl text-gray-600">
-              Start collecting art in three simple steps
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="bg-purple-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-6">
-                1
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">
+                20+
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Create Your Account
-              </h3>
-              <p className="text-gray-600">
-                Sign up for free in seconds. No credit card required.
-                Start browsing immediately.
-              </p>
+              <div className="text-gray-600">
+                Curated Artworks
+              </div>
             </div>
-
-            {/* Step 2 */}
-            <div className="relative">
-              <div className="bg-purple-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-6">
-                2
+            <div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">
+                Real-Time
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Find Your Artwork
-              </h3>
-              <p className="text-gray-600">
-                Browse our curated collection. Use filters to find pieces that
-                match your style and budget.
-              </p>
+              <div className="text-gray-600">
+                Live Bidding
+              </div>
             </div>
-
-            {/* Step 3 */}
-            <div className="relative">
-              <div className="bg-purple-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-6">
-                3
+            <div>
+              <div className="text-4xl font-bold text-purple-600 mb-2">
+                100%
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Place Your Bid
-              </h3>
-              <p className="text-gray-600">
-                Join live auctions and compete for your favorite pieces.
-                Win and add to your collection.
-              </p>
+              <div className="text-gray-600">
+                Transparent Auctions
+              </div>
             </div>
           </div>
         </div>
@@ -211,7 +122,7 @@ export default function Home() {
       <section className="bg-gradient-to-r from-purple-600 to-blue-600 py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-6">
-            {user ? 'Start Bidding Today' : 'Ready to Start Collecting?'}
+            {user ? 'Start Today' : 'Ready to Start Collecting?'}
           </h2>
           <p className="text-xl text-purple-100 mb-8">
             {user 
@@ -219,12 +130,20 @@ export default function Home() {
               : 'Join thousands of art enthusiasts discovering emerging talent.'}
           </p>
           {user ? (
-            <Link
-              href="/artworks"
-              className="inline-block bg-white text-purple-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition font-semibold text-lg"
-            >
-              Browse Artworks
-            </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  href="/artworks"
+                  className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-gray-50 transition font-semibold text-lg border-2 border-purple-600"
+                >
+                  Browse Artworks
+                </Link>
+                <Link
+                  href="/auctions"
+                  className="bg-white text-purple-600 px-8 py-3 rounded-lg hover:bg-gray-50 transition font-semibold text-lg border-2 border-purple-600"
+                >
+                  View Auctions
+                </Link>
+              </div>
           ) : (
             <Link
               href="/register"

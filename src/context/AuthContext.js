@@ -72,14 +72,19 @@ export function AuthProvider({ children }) {
   }, []); // Empty array = only run once when component loads
 
   // Logout function
-  const logout = async () => {
-    try {
-      await signOut(auth); // Tell Firebase to sign out
-      setUser(null);       // Clear user from state
-    } catch (error) {
-      console.error('Error signing out:', error);
+const logout = async () => {
+  try {
+    await signOut(auth);
+    setUser(null);
+    
+    // Redirect to homepage after logout
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
     }
-  };
+  } catch (error) {
+    console.error('Error signing out:', error);
+  }
+};
 
   // This is the data we're sharing with the entire app
   const value = {

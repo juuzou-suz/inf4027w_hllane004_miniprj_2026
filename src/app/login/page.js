@@ -1,57 +1,36 @@
-'use client'; // This runs in the browser
+'use client';
 
-// Import React hooks
 import { useState } from 'react';
-
-
-// Import Next.js navigation
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-
-// Import Firebase authentication function
 import { signInWithEmailAndPassword } from 'firebase/auth';
-
-// Import our Firebase auth instance
 import { auth } from '@/lib/firebase';
 
 export default function LoginPage() {
-  // useRouter allows us to redirect users after successful login
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
 
-  // Form state - stores what user types in the form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // UI state - controls loading and error messages
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Handle form submission
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevents page from refreshing when form is submitted
-    
-    // Clear any previous errors
+    e.preventDefault();
     setError('');
-
-    // Show loading state
     setLoading(true);
 
     try {
-      // Firebase's built-in login function
-      // This checks if email and password are correct
       await signInWithEmailAndPassword(auth, email, password);
-
-      // Success! Redirect to homepage
-      // The AuthContext will automatically detect the user is logged in
-      router.push('/');
+      
+      // Redirect to the page they came from (or home if no redirect)
+      router.push(redirectUrl);
 
     } catch (error) {
-      // Handle errors
       console.error('Login error:', error);
 
-      // Show user-friendly error messages
       if (error.code === 'auth/invalid-credential') {
-        // This covers both wrong email and wrong password
         setError('Invalid email or password. Please try again.');
       } else if (error.code === 'auth/user-not-found') {
         setError('No account found with this email. Please register first.');
@@ -65,14 +44,13 @@ export default function LoginPage() {
         setError('Login failed. Please try again.');
       }
 
-      setLoading(false); // Stop loading state
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             🎨 Welcome Back
@@ -82,21 +60,15 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
             {error}
           </div>
         )}
 
-        {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-6">
-          {/* Email Input */}
           <div>
-            <label 
-              htmlFor="email" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
             <input
@@ -111,12 +83,8 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Password Input */}
           <div>
-            <label 
-              htmlFor="password" 
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
             <input
@@ -131,7 +99,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Login Button */}
           <button
             type="submit"
             disabled={loading}
@@ -141,11 +108,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Register Link */}
         <p className="text-center text-gray-600 mt-6">
-          Do not have an account?{' '}
+          Don't have an account?{' '}
           <Link 
-            href="/register" 
+            href={`/register${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
             className="text-blue-600 font-semibold hover:underline"
           >
             Register here
