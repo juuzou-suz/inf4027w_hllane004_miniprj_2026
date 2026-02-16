@@ -21,6 +21,7 @@ export default function NewArtworkPage() {
     height: '',
     depth: '',
     yearCreated: new Date().getFullYear(),
+    price: '',
     startingBid: '',
     tags: '',
   });
@@ -54,26 +55,26 @@ export default function NewArtworkPage() {
 
       // Prepare artwork data
       const artworkData = {
-        title: formData.title.trim(),
-        artist: formData.artist.trim(),
-        description: formData.description.trim(),
-        imageUrl: formData.imageUrl.trim() || 'https://via.placeholder.com/800x600?text=No+Image',
-        medium: formData.medium.trim(),
-        style: formData.style.trim(),
-        dimensions: {
-          width: parseFloat(formData.width) || 0,
-          height: parseFloat(formData.height) || 0,
-          depth: parseFloat(formData.depth) || 0,
-        },
-        yearCreated: parseInt(formData.yearCreated) || new Date().getFullYear(),
-        startingBid: parseFloat(formData.startingBid),
-        currentBid: null,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-        status: 'available',
-        createdBy: user.uid,
-        viewCount: 0,
-      };
-
+  title: formData.title.trim(),
+  artist: formData.artist.trim(),
+  description: formData.description.trim(),
+  imageUrl: formData.imageUrl.trim() || 'https://via.placeholder.com/800x600?text=No+Image',
+  medium: formData.medium.trim(),
+  style: formData.style.trim(),
+  dimensions: {
+    width: parseFloat(formData.width) || 0,
+    height: parseFloat(formData.height) || 0,
+    depth: parseFloat(formData.depth) || 0,
+  },
+  yearCreated: parseInt(formData.yearCreated) || new Date().getFullYear(),
+  price: formData.price ? parseFloat(formData.price) : null, // Add this
+  startingBid: parseFloat(formData.startingBid),
+  currentBid: null,
+  tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+  status: 'available',
+  createdBy: user.uid,
+  viewCount: 0,
+};
       // Create artwork
       const artworkId = await createArtwork(artworkData);
       
@@ -279,25 +280,47 @@ export default function NewArtworkPage() {
               placeholder="2"
             />
           </div>
+          {/* Regular Price */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Price (ZAR) - For Direct Purchase
+  </label>
+  <input
+    type="number"
+    name="price"
+    value={formData.price}
+    onChange={handleChange}
+    min="10"
+    step="10"
+    autoComplete="off"
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+    placeholder="e.g., 500"
+  />
+  <p className="text-sm text-gray-500 mt-1">
+    Regular price for customers to purchase directly (not via auction)
+  </p>
+</div>
 
-          {/* Starting Bid */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Starting Bid (ZAR) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              name="startingBid"
-              value={formData.startingBid}
-              onChange={handleChange}
-              required
-              min="10"
-              step="10"
-              autoComplete="off"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="500"
-            />
-          </div>
+{/* Starting Bid */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Starting Bid (ZAR) - For Auctions
+  </label>
+  <input
+    type="number"
+    name="startingBid"
+    value={formData.startingBid}
+    onChange={handleChange}
+    min="10"
+    step="10"
+    autoComplete="off"
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+    placeholder="e.g., 400"
+  />
+  <p className="text-sm text-gray-500 mt-1">
+    Minimum bid when this artwork is placed in an auction
+  </p>
+</div>
 
           {/* Description */}
           <div className="md:col-span-2">

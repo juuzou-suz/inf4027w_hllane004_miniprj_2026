@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getAuctionStatus, updateAuctionStatusIfNeeded } from '@/lib/auctionHelpers';
 
 export default function AdminAuctionsPage() {
   const { user } = useAuth();
@@ -27,6 +28,32 @@ export default function AdminAuctionsPage() {
     fetchData();
   }, []);
 
+  // Check and update statuses every 10 seconds
+  useEffect(() => {
+    if (auctions.length === 0) return;
+
+    const checkStatuses = async () => {
+      const updatedAuctions = await Promise.all(
+        auctions.map(async (auction) => {
+          const correctStatus = getAuctionStatus(auction);
+          if (correctStatus !== auction.status) {
+            await updateAuctionStatusIfNeeded(auction.id, auction);
+          }
+          return { ...auction, status: correctStatus };
+        })
+      );
+      setAuctions(updatedAuctions);
+    };
+
+    // Check immediately
+    checkStatuses();
+
+    // Check every 10 seconds
+    const interval = setInterval(checkStatuses, 10000);
+
+    return () => clearInterval(interval);
+  }, [auctions.length]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -34,8 +61,23 @@ export default function AdminAuctionsPage() {
         getAllArtworks(),
         getAllAuctions()
       ]);
+      
+      // Update statuses on initial load
+      const auctionsWithCorrectStatus = auctionsData.map(auction => ({
+        ...auction,
+        status: getAuctionStatus(auction)
+      }));
+      
       setArtworks(artworksData);
-      setAuctions(auctionsData);
+      setAuctions(auctionsWithCorrectStatus);
+      
+      // Update in database if needed (don't wait for this)
+      auctionsWithCorrectStatus.forEach(auction => {
+        if (auction.status !== auctionsData.find(a => a.id === auction.id).status) {
+          updateAuctionStatusIfNeeded(auction.id, auction);
+        }
+      });
+      
       setError('');
     } catch (err) {
       console.error('Error fetching data:', err);

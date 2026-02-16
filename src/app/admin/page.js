@@ -164,30 +164,6 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </div>
-
-      {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">
-          👋 Getting Started
-        </h3>
-        <p className="text-blue-800 mb-4">
-          This is your admin dashboard. From here you can:
-        </p>
-        <ul className="space-y-2 text-blue-800">
-          <li className="flex items-start">
-            <span className="mr-2">•</span>
-            <span>Add and manage artworks in the Artworks section</span>
-          </li>
-          <li className="flex items-start">
-            <span className="mr-2">•</span>
-            <span>Create and schedule auctions (coming in Week 2)</span>
-          </li>
-          <li className="flex items-start">
-            <span className="mr-2">•</span>
-            <span>View reports and analytics (coming in Week 3)</span>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

@@ -21,6 +21,7 @@ export default function EditArtworkPage() {
     height: '',
     depth: '',
     yearCreated: new Date().getFullYear(),
+    price: '',
     startingBid: '',
     status: 'available',
     tags: '',
@@ -50,20 +51,21 @@ export default function EditArtworkPage() {
 
       // Populate form with existing data
       setFormData({
-        title: artwork.title || '',
-        artist: artwork.artist || '',
-        description: artwork.description || '',
-        imageUrl: artwork.imageUrl || '',
-        medium: artwork.medium || '',
-        style: artwork.style || '',
-        width: artwork.dimensions?.width || '',
-        height: artwork.dimensions?.height || '',
-        depth: artwork.dimensions?.depth || '',
-        yearCreated: artwork.yearCreated || new Date().getFullYear(),
-        startingBid: artwork.startingBid || '',
-        status: artwork.status || 'available',
-        tags: artwork.tags?.join(', ') || '',
-      });
+  title: artwork.title || '',
+  artist: artwork.artist || '',
+  description: artwork.description || '',
+  imageUrl: artwork.imageUrl || '',
+  medium: artwork.medium || '',
+  style: artwork.style || '',
+  width: artwork.dimensions?.width || '',
+  height: artwork.dimensions?.height || '',
+  depth: artwork.dimensions?.depth || '',
+  yearCreated: artwork.yearCreated || new Date().getFullYear(),
+  price: artwork.price || '', // Add this
+  startingBid: artwork.startingBid || '',
+  status: artwork.status || 'available',
+  tags: artwork.tags?.join(', ') || '',
+});
       
       setError('');
     } catch (err) {
@@ -100,22 +102,23 @@ export default function EditArtworkPage() {
 
       // Prepare update data
       const updateData = {
-        title: formData.title.trim(),
-        artist: formData.artist.trim(),
-        description: formData.description.trim(),
-        imageUrl: formData.imageUrl.trim() || 'https://via.placeholder.com/800x600?text=No+Image',
-        medium: formData.medium.trim(),
-        style: formData.style.trim(),
-        dimensions: {
-          width: parseFloat(formData.width) || 0,
-          height: parseFloat(formData.height) || 0,
-          depth: parseFloat(formData.depth) || 0,
-        },
-        yearCreated: parseInt(formData.yearCreated) || new Date().getFullYear(),
-        startingBid: parseFloat(formData.startingBid),
-        status: formData.status,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      };
+  title: formData.title.trim(),
+  artist: formData.artist.trim(),
+  description: formData.description.trim(),
+  imageUrl: formData.imageUrl.trim() || 'https://via.placeholder.com/800x600?text=No+Image',
+  medium: formData.medium.trim(),
+  style: formData.style.trim(),
+  dimensions: {
+    width: parseFloat(formData.width) || 0,
+    height: parseFloat(formData.height) || 0,
+    depth: parseFloat(formData.depth) || 0,
+  },
+  yearCreated: parseInt(formData.yearCreated) || new Date().getFullYear(),
+  price: formData.price ? parseFloat(formData.price) : null, // Add this
+  startingBid: parseFloat(formData.startingBid),
+  status: formData.status,
+  tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+};
 
       // Update artwork
       await updateArtwork(artworkId, updateData);

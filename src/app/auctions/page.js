@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getAllAuctions } from '@/lib/firestore';
+import { getAuctionStatus, updateAuctionStatusIfNeeded } from '@/lib/auctionHelpers';
 
 export default function AuctionsPage() {
   const [auctions, setAuctions] = useState([]);
@@ -14,11 +15,52 @@ export default function AuctionsPage() {
     fetchAuctions();
   }, []);
 
+  // Check and update statuses every 10 seconds
+  useEffect(() => {
+    if (auctions.length === 0) return;
+
+    const checkStatuses = async () => {
+      const updatedAuctions = await Promise.all(
+        auctions.map(async (auction) => {
+          const correctStatus = getAuctionStatus(auction);
+          if (correctStatus !== auction.status) {
+            await updateAuctionStatusIfNeeded(auction.id, auction);
+          }
+          return { ...auction, status: correctStatus };
+        })
+      );
+      setAuctions(updatedAuctions);
+    };
+
+    // Check immediately
+    checkStatuses();
+
+    // Check every 10 seconds
+    const interval = setInterval(checkStatuses, 10000);
+
+    return () => clearInterval(interval);
+  }, [auctions.length]); // Only depend on length to avoid infinite loop
+
   const fetchAuctions = async () => {
     try {
       setLoading(true);
       const data = await getAllAuctions();
-      setAuctions(data);
+      
+      // Update statuses on initial load
+      const auctionsWithCorrectStatus = data.map(auction => ({
+        ...auction,
+        status: getAuctionStatus(auction)
+      }));
+      
+      setAuctions(auctionsWithCorrectStatus);
+      
+      // Update in database if needed (don't wait for this)
+      auctionsWithCorrectStatus.forEach(auction => {
+        if (auction.status !== data.find(a => a.id === auction.id).status) {
+          updateAuctionStatusIfNeeded(auction.id, auction);
+        }
+      });
+      
       setError('');
     } catch (err) {
       console.error('Error fetching auctions:', err);
@@ -221,13 +263,12 @@ export default function AuctionsPage() {
                     </div>
 
                     {/* Action Button */}
-                   {/* Action Button */}
-<Link
-  href={`/auctions/${auction.id}`}
-  className="block w-full bg-purple-600 text-white text-center px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
->
-  {auction.status === 'live' ? 'View Auction' : 'View Details'}
-</Link>
+                    <Link
+                      href={`/auctions/${auction.id}`}
+                      className="block w-full bg-purple-600 text-white text-center px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+                    >
+                      {auction.status === 'live' ? 'View Auction' : 'View Details'}
+                    </Link>
                   </div>
                 </div>
               ))}
