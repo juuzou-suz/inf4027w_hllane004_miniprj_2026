@@ -185,7 +185,7 @@ export async function getArtworksByStyle(style) {
 }
 
 // ============================================
-// AUCTIONS (Week 2 - Preview)
+// AUCTIONS 
 // ============================================
 
 /**
@@ -230,7 +230,7 @@ export async function getAuctionsByStatus(status) {
 }
 
 // ============================================
-// BIDS (Week 2 - Preview)
+// BIDS 
 // ============================================
 
 /**
@@ -289,12 +289,84 @@ export async function placeBid(bidData) {
     const docRef = await addDoc(collection(db, 'bids'), {
       ...bidData,
       timestamp: serverTimestamp(),
-      isWinning: true,  // Will be updated when new bids come in
+      isWinning: true, 
       isOutbid: false
     });
     return docRef.id;
   } catch (error) {
     console.error('Error placing bid:', error);
+    throw error;
+  }
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+/**
+ * Create a new order
+ */
+export async function createOrder(orderData) {
+  try {
+    const docRef = await addDoc(collection(db, 'orders'), {
+      ...orderData,
+      createdAt: serverTimestamp(),
+      status: 'completed',
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating order:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all orders (admin)
+ */
+export async function getAllOrders() {
+  try {
+    const ordersSnapshot = await getDocs(
+      query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
+    );
+    return ordersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error getting orders:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get orders by user ID
+ */
+export async function getOrdersByUser(userId) {
+  try {
+    const q = query(
+      collection(db, 'orders'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    const ordersSnapshot = await getDocs(q);
+    return ordersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error getting user orders:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update order status (admin)
+ */
+export async function updateOrderStatus(orderId, status) {
+  try {
+    await updateDoc(doc(db, 'orders', orderId), { status });
+  } catch (error) {
+    console.error('Error updating order status:', error);
     throw error;
   }
 }

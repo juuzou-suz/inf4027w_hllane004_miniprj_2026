@@ -3,6 +3,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import NavbarWrapper from "@/components/NavbarWrapper";
 
 export const metadata = {
   title: "Curate - Art Auction Platform",
@@ -15,11 +16,11 @@ export default function RootLayout({ children }) {
       <body className="flex flex-col min-h-screen">
         <AuthProvider>
           <CartProvider>
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
+            <NavbarWrapper />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
           </CartProvider>
         </AuthProvider>
       </body>

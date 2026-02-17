@@ -1,9 +1,18 @@
 'use client';
 
+import { useAuth } from '@/context/AuthContext';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Footer() {
+  const { user } = useAuth();
+  const pathname = usePathname();
   const currentYear = new Date().getFullYear();
+
+  // Hide footer for admins and on admin pages
+  if (user?.role === 'admin' || pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-auto">
@@ -30,26 +39,17 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link
-                  href="/"
-                  className="hover:text-purple-400 transition"
-                >
+                <Link href="/" className="hover:text-purple-400 transition">
                   Home
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/artworks"
-                  className="hover:text-purple-400 transition"
-                >
+                <Link href="/artworks" className="hover:text-purple-400 transition">
                   Artworks
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/auctions"
-                  className="hover:text-purple-400 transition"
-                >
+                <Link href="/auctions" className="hover:text-purple-400 transition">
                   Auctions
                 </Link>
               </li>
@@ -61,26 +61,17 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Account</h3>
             <ul className="space-y-2">
               <li>
-                <Link
-                  href="/login"
-                  className="hover:text-purple-400 transition"
-                >
+                <Link href="/login" className="hover:text-purple-400 transition">
                   Log In
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/register"
-                  className="hover:text-purple-400 transition"
-                >
+                <Link href="/register" className="hover:text-purple-400 transition">
                   Register
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/dashboard"
-                  className="hover:text-purple-400 transition"
-                >
+                <Link href="/" className="hover:text-purple-400 transition">
                   Dashboard
                 </Link>
               </li>

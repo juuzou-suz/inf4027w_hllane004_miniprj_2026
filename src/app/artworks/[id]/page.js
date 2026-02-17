@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getArtworkById } from '@/lib/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -12,6 +13,7 @@ export default function ArtworkDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { addToCart } = useCart();
   const artworkId = params.id;
 
   // State
@@ -104,13 +106,12 @@ export default function ArtworkDetailPage() {
   // Handle Add to Cart
   const handleAddToCart = () => {
     if (!user) {
-      // Redirect to login with return URL
-      router.push(`/login?redirect=/artworks/${artworkId}`);
+      const redirectUrl = encodeURIComponent(`/artworks/${artworkId}`);
+      router.push(`/login?redirect=${redirectUrl}`);
       return;
     }
-
-    // TODO: Implement cart functionality (Week 3)
-    alert('Cart functionality coming soon! For now, this artwork has been "added to cart".');
+    addToCart(artwork);
+    alert(`"${artwork.title}" has been added to your cart!`);
   };
 
   // Handle auction button click

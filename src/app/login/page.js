@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,10 +24,19 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      // Redirect to the page they came from (or home if no redirect)
-      router.push(redirectUrl);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+// Fetch user role from Firestore to determine redirect
+const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+const userData = userDoc.data();
+
+if (userData?.role === 'admin') {
+  // Admins always go to admin dashboard
+  router.push('/admin');
+} else {
+  // Customers go to their intended page or home
+  router.push(redirectUrl);
+}
 
     } catch (error) {
       console.error('Login error:', error);
