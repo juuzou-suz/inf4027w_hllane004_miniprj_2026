@@ -47,18 +47,35 @@ export default function NewArtworkPage() {
     try {
       // Validate required fields
       if (!formData.title || !formData.artist || !formData.medium || 
-          !formData.style || !formData.startingBid) {
+          !formData.style || !formData.price) {
         setError('Please fill in all required fields');
         setLoading(false);
         return;
       }
+
+      // Validate image path if provided
+if (formData.imageUrl) {
+  const trimmed = formData.imageUrl.trim();
+
+  if (!trimmed.startsWith('/Images/')) {
+    setError('Image path must start with /Images/');
+    setLoading(false);
+    return;
+  }
+
+  if (!/\.(jpg|jpeg|png|webp)$/i.test(trimmed)) {
+    setError('Image must be .jpg, .jpeg, .png or .webp');
+    setLoading(false);
+    return;
+  }
+}
 
       // Prepare artwork data
       const artworkData = {
   title: formData.title.trim(),
   artist: formData.artist.trim(),
   description: formData.description.trim(),
-  imageUrl: formData.imageUrl.trim() || 'https://via.placeholder.com/800x600?text=No+Image',
+  imageUrl: formData.imageUrl.trim() || '/Images/Placeholder.png',
   medium: formData.medium.trim(),
   style: formData.style.trim(),
   dimensions: {
@@ -164,15 +181,15 @@ export default function NewArtworkPage() {
               Image URL
             </label>
             <input
-              type="url"
+              type="text"
               name="imageUrl"
               value={formData.imageUrl}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="https://example.com/image.jpg or use https://picsum.photos/800/600"
+              placeholder="/Images/ArtworkName.jpg"
             />
             <p className="text-sm text-gray-500 mt-1">
-              Tip: Use <a href="https://picsum.photos/" target="_blank" className="text-purple-600 hover:underline">https://picsum.photos/800/600</a> for placeholder images
+              Example: /Images/ArtworkName.jpg  or use /Images/ArtworkName.png
             </p>
           </div>
 
@@ -191,7 +208,7 @@ export default function NewArtworkPage() {
               <option value="">Select medium</option>
               <option value="Oil on canvas">Oil on canvas</option>
               <option value="Acrylic on canvas">Acrylic on canvas</option>
-              <option value="Watercolor">Watercolor</option>
+              <option value="Watercolour">Watercolour</option>
               <option value="Digital art">Digital art</option>
               <option value="Mixed media">Mixed media</option>
               <option value="Photography">Photography</option>

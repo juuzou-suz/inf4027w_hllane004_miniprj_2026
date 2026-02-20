@@ -194,15 +194,18 @@ export default function AdminAuctionsPage() {
     );
   };
 
-  // Get available artworks (not currently in auction)
-  const availableArtworks = artworks.filter(artwork => {
-    // Check if artwork is already in an active auction
-    const hasActiveAuction = auctions.some(
-      auction => auction.artworkId === artwork.id && 
-      (auction.status === 'live' || auction.status === 'upcoming')
-    );
-    return !hasActiveAuction && artwork.status === 'available';
-  });
+  // Get available artworks (not sold, not in any auction)
+const availableArtworks = artworks.filter(artwork => {
+  // Must be available (not sold)
+  if (artwork.status !== 'available') return false;
+  
+  // Must NOT be in ANY auction (even ended ones)
+  const hasAnyAuction = auctions.some(
+    auction => auction.artworkId === artwork.id
+  );
+  
+  return !hasAnyAuction;
+});
 
   return (
     <div>

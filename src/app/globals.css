@@ -1,26 +1,301 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   CURATE - CONTEMPORARY AFRICAN ART GALLERY
+   Warm, textured, grounded aesthetic
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* Light Mode - Gallery Warmth */
+  --background: #F5EFE6;        /* Warm sand */
+  --surface: #E8D8C3;           /* Soft beige cards */
+  --clay: #8C5A3C;              /* Primary terracotta clay */
+  --clay-dark: #6B4226;         /* Deep brown */
+  --text-primary: #2E2A27;      /* Charcoal text */
+  --text-muted: #6F665E;        /* Muted warm gray */
+  --border: #D4C5B9;            /* Soft border */
+  --overlay: rgba(140, 90, 60, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1E1A17;      /* Charcoal brown */
+    --surface: #2A241F;         /* Deep warm brown */
+    --clay: #A06A4B;            /* Muted clay */
+    --clay-dark: #8C5A3C;       /* Slightly lighter for contrast */
+    --text-primary: #F3ECE4;    /* Warm off-white */
+    --text-muted: #C5B8AD;      /* Muted warm text */
+    --border: #3D3530;          /* Dark border */
+    --overlay: rgba(160, 106, 75, 0.12);
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --color-surface: var(--surface);
+  --color-clay: var(--clay);
+  --color-clay-dark: var(--clay-dark);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+}
+
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+* {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* Subtle paper texture */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: 
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px);
+  z-index: 9999;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+textarea,
+select {
+  color: var(--text-primary) !important;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--clay) !important;
+  box-shadow: 0 0 0 1px var(--clay);
+}
+
+::selection {
+  background-color: var(--clay);
+  color: #F5EFE6;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--clay);
+}
+
+
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--cream);
+  color: var(--charcoal);
+}
+
+/* ─── Input Styles ────────────────────────────────────────────────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="datetime-local"],
+input[type="search"],
+textarea,
+select {
+  color: var(--charcoal) !important;
+  background-color: white !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--charcoal-soft) !important;
+  opacity: 0.6;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: var(--charcoal) !important;
+  caret-color: var(--charcoal) !important;
+}
+
+/* ─── Focus Styles ─────────────────────────────────────────────────────────── */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--clay) !important;
+  ring: 2px solid var(--clay);
+}
+
+/* ─── Custom Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sand-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--beige-dark);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--clay);
+}
+
+/* ─── Selection ────────────────────────────────────────────────────────────── */
+::selection {
+  background-color: var(--clay);
+  color: white;
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--sand-light) 25%,
+    var(--sand) 50%,
+    var(--sand-light) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* ─── Custom Utilities ─────────────────────────────────────────────────────── */
+.text-gradient-clay {
+  background: linear-gradient(135deg, var(--clay) 0%, var(--amber) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-pattern-subtle {
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(193, 120, 85, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(212, 165, 116, 0.03) 0%, transparent 50%);
+}
+
+.shadow-warm {
+  box-shadow: var(--shadow-warm);
+}
+
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+/* ─── Card Hover Effects ───────────────────────────────────────────────────── */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(193, 120, 85, 0.18);
+}
+
+/* ─── Button Styles ────────────────────────────────────────────────────────── */
+.btn-clay {
+  background-color: var(--clay);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-clay:hover {
+  background-color: var(--clay-dark);
+  box-shadow: var(--shadow-warm);
+}
+
+.btn-clay:active {
+  transform: scale(0.98);
+}
+
+/* ─── Decorative Elements ──────────────────────────────────────────────────── */
+.divider-clay {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--clay) 50%,
+    transparent
+  );
+}
+
+/* ─── Typography Enhancements ──────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.font-display {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* ─── Loading States ───────────────────────────────────────────────────────── */
+.spinner-clay {
+  border-color: var(--sand);
+  border-top-color: var(--clay);
 }
