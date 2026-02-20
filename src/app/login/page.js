@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,114 +19,160 @@ export default function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setError('');
     setLoading(true);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-// Fetch user role from Firestore to determine redirect
-const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-const userData = userDoc.data();
+      // Fetch user role from Firestore to determine redirect
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userData = userDoc.data();
 
-if (userData?.role === 'admin') {
-  // Admins always go to admin dashboard
-  router.push('/admin');
-} else {
-  // Customers go to their intended page or home
-  router.push(redirectUrl);
-}
-
-    } catch (error) {
-      console.error('Login error:', error);
-
-      if (error.code === 'auth/invalid-credential') {
-        setError('Invalid email or password. Please try again.');
-      } else if (error.code === 'auth/user-not-found') {
-        setError('No account found with this email. Please register first.');
-      } else if (error.code === 'auth/wrong-password') {
-        setError('Incorrect password. Please try again.');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('Invalid email address format.');
-      } else if (error.code === 'auth/too-many-requests') {
-        setError('Too many failed login attempts. Please try again later.');
+      if (userData?.role === 'admin') {
+        router.push('/admin');
       } else {
-        setError('Login failed. Please try again.');
+        router.push(redirectUrl);
       }
+    } catch (err) {
+      console.error('Login error:', err);
 
+      const code = err?.code;
+      if (code === 'auth/invalid-credential') setError('Invalid email or password. Please try again.');
+      else if (code === 'auth/user-not-found') setError('No account found with this email. Please register first.');
+      else if (code === 'auth/wrong-password') setError('Incorrect password. Please try again.');
+      else if (code === 'auth/invalid-email') setError('Invalid email address format.');
+      else if (code === 'auth/too-many-requests') setError('Too many failed login attempts. Please try again later.');
+      else setError('Login failed. Please try again.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 px-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            🎨 Welcome Back
-          </h1>
-          <p className="text-gray-600">
-            Log in to continue bidding on artworks
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background:  'rgb(255, 255, 255)' }}
+    >
+      <div className="w-full max-w-md">
+        {/* Card */}
+        <div
+          className="rounded-2xl border p-8"
+          style={{
+            background: 'rgba(255,255,255,0.55)',
+            borderColor: 'var(--border)',
+            boxShadow: 'var(--shadow-card)',
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1
+              className="font-display text-3xl font-black"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Welcome back
+            </h1>
+
+            <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Log in to continue collecting and bidding.
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div
+              className="mb-6 rounded-xl border px-4 py-3 text-sm"
+              style={{
+                background: 'rgba(190, 58, 38, 0.08)',
+                borderColor: 'rgba(190, 58, 38, 0.22)',
+                color: '#8b2d1f',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-xs font-semibold uppercase tracking-widest"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Email
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                placeholder="you@example.com"
+                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                style={{
+                  background: '#ffffff',
+                  borderColor: 'var(--border)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-xs font-semibold uppercase tracking-widest"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Password
+              </label>
+
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="Enter your password"
+                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                style={{
+                  background: '#ffffff',
+                  borderColor: 'var(--border)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed hover:brightness-110"
+              style={{
+                background: 'var(--clay)',
+                color: '#F5EFE6',
+              }}
+            >
+              {loading ? 'Logging in…' : 'Log in'}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            Don&apos;t have an account?{' '}
+            <Link
+              href={`/register${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
+              className="font-semibold transition-colors hover:opacity-80"
+              style={{ color: 'var(--clay)' }}
+            >
+              Register here
+            </Link>
           </p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="you@example.com"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="Enter your password"
-              disabled={loading}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Logging in...' : 'Log In'}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-600 mt-6">
-          Don't have an account?{' '}
-          <Link 
-            href={`/register${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
-            className="text-blue-600 font-semibold hover:underline"
-          >
-            Register here
-          </Link>
-        </p>
       </div>
     </div>
   );

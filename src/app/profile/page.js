@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
 import { getOrdersByUser } from '@/lib/firestore';
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('orders');
 
@@ -28,35 +28,40 @@ export default function ProfilePage() {
       return;
     }
 
-    // Fetch orders
     getOrdersByUser(user.uid)
       .then(setOrders)
       .catch(console.error)
       .finally(() => setOrdersLoading(false));
 
-    // Real-time bids listener
     const bidsQuery = query(
       collection(db, 'bids'),
       where('userId', '==', user.uid),
       orderBy('timestamp', 'desc')
     );
+
     const unsubBids = onSnapshot(bidsQuery, (snap) => {
       setBids(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setBidsLoading(false);
     });
 
-    // Real-time auctions listener
     const unsubAuctions = onSnapshot(collection(db, 'auctions'), (snap) => {
       setAuctions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsubBids(); unsubAuctions(); };
+    return () => {
+      unsubBids();
+      unsubAuctions();
+    };
   }, [user, router]);
 
   if (!user) return null;
 
   const formatPrice = (price) =>
-    new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(price);
+    new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 0,
+    }).format(price || 0);
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
@@ -74,136 +79,232 @@ export default function ProfilePage() {
   const getAuction = (auctionId) => auctions.find((a) => a.id === auctionId);
   const isWinning = (auctionId) => getAuction(auctionId)?.currentBidderId === user.uid;
 
-  // Group bids by auction, keep only latest per auction
-  const bidsByAuction = bids.reduce((acc, bid) => {
-    if (!acc[bid.auctionId]) acc[bid.auctionId] = bid;
-    return acc;
-  }, {});
+  // Group bids by auction; keep latest per auction (bids are already ordered desc)
+  const bidsByAuction = useMemo(() => {
+    return bids.reduce((acc, bid) => {
+      if (!acc[bid.auctionId]) acc[bid.auctionId] = bid;
+      return acc;
+    }, {});
+  }, [bids]);
 
-  const activeBids = Object.values(bidsByAuction).filter((bid) => {
-    const auction = getAuction(bid.auctionId);
-    return auction && (auction.status === 'live' || auction.status === 'upcoming');
-  });
+  const activeBids = useMemo(() => {
+    return Object.values(bidsByAuction).filter((bid) => {
+      const auction = getAuction(bid.auctionId);
+      return auction && (auction.status === 'live' || auction.status === 'upcoming');
+    });
+  }, [bidsByAuction, auctions]);
 
-  const wonAuctions = auctions.filter(
-    (a) => a.status === 'ended' && a.winnerId === user.uid
-  );
+  const wonAuctions = useMemo(() => {
+    return auctions.filter((a) => a.status === 'ended' && a.winnerId === user.uid);
+  }, [auctions, user.uid]);
 
-  const totalSpent = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalSpent = useMemo(() => {
+    return orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  }, [orders]);
+
+  const tabs = [
+    { id: 'orders', label: 'Order history', icon: '📦' },
+    { id: 'bids', label: 'Active bids', icon: '⚡' },
+    { id: 'won', label: 'Won auctions', icon: '🏆' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-10" style={{ background: 'rgb(255, 255, 255)' }}>
+      <div className="container">
+        {/* Header card */}
+        <section
+          className="rounded-2xl border p-6 md:p-8"
+          style={{
+            background: 'rgba(232, 216, 195, 0.55)',
+            borderColor: 'var(--border)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-full border"
+                style={{
+                  background: 'rgba(245, 239, 230, 0.75)',
+                  borderColor: 'var(--border)',
+                }}
+              >
+                <span className="text-2xl">👤</span>
+              </div>
 
-        {/* Profile Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 mb-8 text-white">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl">
-              👤
+              <div>
+                <h1 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                  {user.email}
+                </h1>
+                <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                  Customer account
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-1">{user.email}</h1>
-              <p className="text-purple-200">Customer Account</p>
-            </div>
-            <button
-              onClick={logout}
-              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition font-medium"
-            >
-              Logout
-            </button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white/10 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold">{orders.length}</div>
-              <div className="text-purple-200 text-sm">Orders</div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div
+              className="rounded-xl border p-4 text-center"
+              style={{ background: 'rgba(245, 239, 230, 0.7)', borderColor: 'var(--border)' }}
+            >
+              <div className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                {orders.length}
+              </div>
+              <div className="mt-1 text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Orders
+              </div>
             </div>
-            <div className="bg-white/10 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold">{wonAuctions.length}</div>
-              <div className="text-purple-200 text-sm">Won Auctions</div>
+
+            <div
+              className="rounded-xl border p-4 text-center"
+              style={{ background: 'rgba(245, 239, 230, 0.7)', borderColor: 'var(--border)' }}
+            >
+              <div className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                {wonAuctions.length}
+              </div>
+              <div className="mt-1 text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Won auctions
+              </div>
             </div>
-            <div className="bg-white/10 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold">{formatPrice(totalSpent)}</div>
-              <div className="text-purple-200 text-sm">Total Spent</div>
+
+            <div
+              className="rounded-xl border p-4 text-center"
+              style={{ background: 'rgba(245, 239, 230, 0.7)', borderColor: 'var(--border)' }}
+            >
+              <div className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                {formatPrice(totalSpent)}
+              </div>
+              <div className="mt-1 text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Total spent
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="flex border-b border-gray-200">
-            {[
-              { id: 'orders', label: '📦 Order History' },
-              { id: 'bids', label: '⚡ Active Bids' },
-              { id: 'won', label: '🏆 Won Auctions' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-4 px-6 font-medium text-sm transition ${
-                  activeTab === tab.id
-                    ? 'border-b-2 border-purple-600 text-purple-600 bg-purple-50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+        {/* Tabs + content card */}
+        <section
+          className="mt-6 overflow-hidden rounded-2xl border"
+          style={{
+            background: 'rgba(245, 239, 230, 0.65)',
+            borderColor: 'var(--border)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          {/* Tabs */}
+          <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
+            {tabs.map((t) => {
+              const active = activeTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTab(t.id)}
+                  className="flex-1 px-4 py-4 text-sm font-semibold transition-colors"
+                  style={{
+                    color: active ? 'var(--clay)' : 'var(--text-muted)',
+                    background: active ? 'rgba(140, 90, 60, 0.10)' : 'transparent',
+                    borderBottom: active ? '2px solid var(--clay)' : '2px solid transparent',
+                  }}
+                >
+                  <span className="mr-2">{t.icon}</span>
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="p-6">
-
-            {/* ── ORDER HISTORY ─────────────────────────────────────────────── */}
+          <div className="p-5 md:p-6">
+            {/* ── ORDERS ───────────────────────────────────────────── */}
             {activeTab === 'orders' && (
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Order History</h2>
+                <h2 className="font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                  Order history
+                </h2>
+
                 {ordersLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  <div className="flex justify-center py-10">
+                    <div
+                      className="h-9 w-9 animate-spin rounded-full border-2"
+                      style={{
+                        borderColor: 'var(--border)',
+                        borderTopColor: 'var(--clay)',
+                      }}
+                    />
                   </div>
                 ) : orders.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">📦</div>
-                    <p className="text-gray-600 mb-6">No orders yet.</p>
-                    <Link href="/artworks" className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold">
-                      Browse Artworks
+                  <div className="py-12 text-center">
+                    <div className="text-5xl">📦</div>
+                    <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      No orders yet.
+                    </p>
+                    <Link
+                      href="/artworks"
+                      className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110"
+                      style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                    >
+                      Browse artworks
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="mt-5 space-y-4">
                     {orders.map((order) => (
-                      <div key={order.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition">
-                        <div className="flex justify-between items-start mb-4">
+                      <div
+                        key={order.id}
+                        className="rounded-2xl border p-5 transition-shadow hover:shadow-md"
+                        style={{ borderColor: 'var(--border)', background: 'rgba(255,255,255,0.55)' }}
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="font-bold text-gray-900">Order #{order.id.substring(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+                            <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                              Order #{order.id?.substring(0, 8)}...
+                            </p>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                              {formatDate(order.createdAt)}
+                            </p>
                           </div>
-                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
-                            ✅ {order.status?.toUpperCase()}
+
+                          <span
+                            className="w-fit rounded-full border px-3 py-1 text-xs font-semibold"
+                            style={{
+                              borderColor: 'rgba(24, 74, 52, 0.18)',
+                              background: 'rgba(24, 74, 52, 0.08)',
+                              color: 'var(--text-primary)',
+                            }}
+                          >
+                            ✅ {(order.status || 'paid').toUpperCase()}
                           </span>
                         </div>
 
-                        {/* Item thumbnails */}
-                        <div className="flex gap-3 mb-4 overflow-x-auto">
-                          {order.items?.map((item, i) => (
-                            <div key={i} className="flex-shrink-0">
-                              <img
-                                src={item.imageUrl || 'https://via.placeholder.com/60x60'}
-                                alt={item.title}
-                                className="w-14 h-14 object-cover rounded-lg"
-                              />
-                              <p className="text-xs text-gray-600 mt-1 w-14 truncate">{item.title}</p>
-                            </div>
-                          ))}
-                        </div>
+                        {/* Thumbnails */}
+                        {order.items?.length > 0 && (
+                          <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                            {order.items.map((item, i) => (
+                              <div key={i} className="flex-shrink-0">
+                                <img
+                                  src={item.imageUrl || 'https://via.placeholder.com/60x60'}
+                                  alt={item.title || 'Artwork'}
+                                  className="h-14 w-14 rounded-xl object-cover"
+                                />
+                                <p
+                                  className="mt-1 w-14 truncate text-xs"
+                                  style={{ color: 'var(--text-muted)' }}
+                                >
+                                  {item.title}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                          <span className="text-sm text-gray-500">
-                            {order.itemCount} item{order.itemCount !== 1 ? 's' : ''} ·{' '}
-                            {paymentLabels[order.paymentMethod] || order.paymentMethod}
+                        <div className="mt-4 flex items-center justify-between border-t pt-4" style={{ borderColor: 'rgba(212, 197, 185, 0.65)' }}>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {order.itemCount || order.items?.length || 0} item
+                            {(order.itemCount || order.items?.length || 0) !== 1 ? 's' : ''} ·{' '}
+                            {paymentLabels[order.paymentMethod] || order.paymentMethod || '—'}
                           </span>
-                          <span className="font-bold text-purple-600 text-lg">
+
+                          <span className="font-display text-lg font-black" style={{ color: 'var(--text-primary)' }}>
                             {formatPrice(order.total)}
                           </span>
                         </div>
@@ -214,53 +315,106 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* ── ACTIVE BIDS ───────────────────────────────────────────────── */}
+            {/* ── ACTIVE BIDS ───────────────────────────────────────── */}
             {activeTab === 'bids' && (
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Active Auction Bids</h2>
+                <h2 className="font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                  Active auction bids
+                </h2>
+
                 {bidsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  <div className="flex justify-center py-10">
+                    <div
+                      className="h-9 w-9 animate-spin rounded-full border-2"
+                      style={{
+                        borderColor: 'var(--border)',
+                        borderTopColor: 'var(--clay)',
+                      }}
+                    />
                   </div>
                 ) : activeBids.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">⚡</div>
-                    <p className="text-gray-600 mb-6">No active bids.</p>
-                    <Link href="/auctions" className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold">
-                      Browse Auctions
+                  <div className="py-12 text-center">
+                    <div className="text-5xl">⚡</div>
+                    <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      No active bids.
+                    </p>
+                    <Link
+                      href="/auctions"
+                      className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110"
+                      style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                    >
+                      Browse auctions
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="mt-5 space-y-4">
                     {activeBids.map((bid) => {
                       const auction = getAuction(bid.auctionId);
                       const winning = isWinning(bid.auctionId);
+
                       return (
-                        <div key={bid.auctionId} className={`border-2 rounded-xl p-5 ${winning ? 'border-green-300 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                          <div className="flex justify-between items-start mb-3">
+                        <div
+                          key={bid.auctionId}
+                          className="rounded-2xl border p-5"
+                          style={{
+                            borderColor: winning ? 'rgba(24, 74, 52, 0.28)' : 'rgba(140, 90, 60, 0.28)',
+                            background: winning ? 'rgba(24, 74, 52, 0.08)' : 'rgba(140, 90, 60, 0.08)',
+                          }}
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                              <p className="font-bold text-gray-900">Auction #{bid.auctionId.substring(0, 8)}...</p>
-                              <p className="text-sm text-gray-600">Status: {auction?.status}</p>
+                              <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                Auction #{bid.auctionId?.substring(0, 8)}...
+                              </p>
+                              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                                Status: {auction?.status || '—'}
+                              </p>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${winning ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+
+                            <span
+                              className="w-fit rounded-full border px-3 py-1 text-xs font-semibold"
+                              style={{
+                                borderColor: winning ? 'rgba(24, 74, 52, 0.25)' : 'rgba(190, 58, 38, 0.25)',
+                                background: winning ? 'rgba(24, 74, 52, 0.10)' : 'rgba(190, 58, 38, 0.10)',
+                                color: 'var(--text-primary)',
+                              }}
+                            >
                               {winning ? '✅ Winning' : '❌ Outbid'}
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <p className="text-xs text-gray-500">Your Bid</p>
-                              <p className="text-xl font-bold text-purple-600">{formatPrice(bid.amount)}</p>
+
+                          <div className="mt-4 grid grid-cols-2 gap-4">
+                            <div
+                              className="rounded-xl border p-4"
+                              style={{ borderColor: 'rgba(212, 197, 185, 0.7)', background: 'rgba(255,255,255,0.5)' }}
+                            >
+                              <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                                Your bid
+                              </p>
+                              <p className="mt-1 font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                                {formatPrice(bid.amount)}
+                              </p>
                             </div>
-                            <div>
-                              <p className="text-xs text-gray-500">Current Bid</p>
-                              <p className="text-xl font-bold text-gray-900">{auction && formatPrice(auction.currentBid)}</p>
+
+                            <div
+                              className="rounded-xl border p-4"
+                              style={{ borderColor: 'rgba(212, 197, 185, 0.7)', background: 'rgba(255,255,255,0.5)' }}
+                            >
+                              <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                                Current bid
+                              </p>
+                              <p className="mt-1 font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                                {auction ? formatPrice(auction.currentBid) : '—'}
+                              </p>
                             </div>
                           </div>
+
                           <Link
                             href={`/auctions/${bid.auctionId}`}
-                            className="block w-full text-center bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition font-medium"
+                            className="mt-4 block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all hover:brightness-110"
+                            style={{ background: 'var(--clay)', color: '#F5EFE6' }}
                           >
-                            {winning ? 'View Auction' : 'Bid Again'}
+                            {winning ? 'View auction' : 'Bid again'}
                           </Link>
                         </div>
                       );
@@ -270,32 +424,69 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* ── WON AUCTIONS ─────────────────────────────────────────────── */}
+            {/* ── WON AUCTIONS ───────────────────────────────────────── */}
             {activeTab === 'won' && (
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Won Auctions</h2>
+                <h2 className="font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+                  Won auctions
+                </h2>
+
                 {wonAuctions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">🏆</div>
-                    <p className="text-gray-600 mb-6">You haven't won any auctions yet.</p>
-                    <Link href="/auctions" className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold">
-                      Browse Auctions
+                  <div className="py-12 text-center">
+                    <div className="text-5xl">🏆</div>
+                    <p className="mt-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      You haven&apos;t won any auctions yet.
+                    </p>
+                    <Link
+                      href="/auctions"
+                      className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110"
+                      style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                    >
+                      Browse auctions
                     </Link>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="mt-5 space-y-4">
                     {wonAuctions.map((auction) => (
-                      <div key={auction.id} className="border-2 border-green-300 bg-green-50 rounded-xl p-5">
-                        <div className="flex justify-between items-center">
+                      <div
+                        key={auction.id}
+                        className="rounded-2xl border p-5"
+                        style={{
+                          borderColor: 'rgba(24, 74, 52, 0.28)',
+                          background: 'rgba(24, 74, 52, 0.08)',
+                        }}
+                      >
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="font-bold text-gray-900">Auction #{auction.id.substring(0, 8)}...</p>
-                            <p className="text-sm text-gray-600">Ended: {new Date(auction.endTime).toLocaleDateString()}</p>
-                            <p className="text-2xl font-bold text-green-600 mt-2">{formatPrice(auction.currentBid)}</p>
+                            <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                              Auction #{auction.id?.substring(0, 8)}...
+                            </p>
+                            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                              Ended: {auction.endTime ? new Date(auction.endTime).toLocaleDateString('en-ZA') : '—'}
+                            </p>
+                            <p className="mt-3 font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                              {formatPrice(auction.currentBid)}
+                            </p>
                           </div>
-                          <div className="flex flex-col items-end gap-3">
-                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">🎉 Won</span>
-                            <Link href={`/auctions/${auction.id}`} className="text-purple-600 hover:underline text-sm font-medium">
-                              View Details
+
+                          <div className="flex flex-col items-start gap-3 sm:items-end">
+                            <span
+                              className="rounded-full border px-3 py-1 text-xs font-semibold"
+                              style={{
+                                borderColor: 'rgba(24, 74, 52, 0.25)',
+                                background: 'rgba(24, 74, 52, 0.10)',
+                                color: 'var(--text-primary)',
+                              }}
+                            >
+                              🎉 Won
+                            </span>
+
+                            <Link
+                              href={`/auctions/${auction.id}`}
+                              className="text-sm font-semibold transition-colors hover:opacity-80"
+                              style={{ color: 'var(--clay)' }}
+                            >
+                              View details
                             </Link>
                           </div>
                         </div>
@@ -305,9 +496,8 @@ export default function ProfilePage() {
                 )}
               </div>
             )}
-
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

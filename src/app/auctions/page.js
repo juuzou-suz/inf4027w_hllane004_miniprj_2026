@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { getAllAuctions } from '@/lib/firestore';
 import { getAuctionStatus, updateAuctionStatusIfNeeded } from '@/lib/auctionHelpers';
@@ -11,56 +11,65 @@ export default function AuctionsPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all'); // all, live, upcoming, ended
 
-  useEffect(() => {
-    fetchAuctions();
-  }, []);
+  // ---------- Helpers ----------
+  const formatPrice = (price) =>
+    new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 0,
+    }).format(price ?? 0);
 
-  // Check and update statuses every 10 seconds
-  useEffect(() => {
-    if (auctions.length === 0) return;
+  const formatDateTime = (value) => {
+    try {
+      return new Date(value).toLocaleString();
+    } catch {
+      return '';
+    }
+  };
 
-    const checkStatuses = async () => {
-      const updatedAuctions = await Promise.all(
-        auctions.map(async (auction) => {
-          const correctStatus = getAuctionStatus(auction);
-          if (correctStatus !== auction.status) {
-            await updateAuctionStatusIfNeeded(auction.id, auction);
-          }
-          return { ...auction, status: correctStatus };
-        })
-      );
-      setAuctions(updatedAuctions);
+  const badge = (status) => {
+    const map = {
+      live: { label: 'Live', bg: 'rgba(190, 58, 38, 0.14)', fg: '#8b2d1f', bd: 'rgba(190, 58, 38, 0.22)' },
+      upcoming: { label: 'Upcoming', bg: 'rgba(167, 107, 17, 0.18)', fg: '#7b4f0e', bd: 'rgba(167, 107, 17, 0.24)' },
+      ended: { label: 'Ended', bg: 'rgba(111, 102, 94, 0.16)', fg: 'rgba(46, 42, 39, 0.80)', bd: 'rgba(111, 102, 94, 0.22)' },
+      completed: { label: 'Completed', bg: 'rgba(24, 74, 52, 0.12)', fg: 'rgba(24, 74, 52, 0.9)', bd: 'rgba(24, 74, 52, 0.20)' },
     };
 
-    // Check immediately
-    checkStatuses();
+    const v = map[status] || map.ended;
 
-    // Check every 10 seconds
-    const interval = setInterval(checkStatuses, 10000);
+    return (
+      <span
+        className="rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
+        style={{
+          background: v.bg,
+          color: v.fg,
+          border: `1px solid ${v.bd}`,
+        }}
+      >
+        {status === 'live' ? '🔴 ' : status === 'upcoming' ? '📅 ' : status === 'ended' ? '⏹️ ' : '✅ '}
+        {v.label}
+      </span>
+    );
+  };
 
-    return () => clearInterval(interval);
-  }, [auctions.length]); // Only depend on length to avoid infinite loop
-
+  // ---------- Fetch ----------
   const fetchAuctions = async () => {
     try {
       setLoading(true);
       const data = await getAllAuctions();
-      
-      // Update statuses on initial load
-      const auctionsWithCorrectStatus = data.map(auction => ({
-        ...auction,
-        status: getAuctionStatus(auction)
-      }));
-      
-      setAuctions(auctionsWithCorrectStatus);
-      
-      // Update in database if needed (don't wait for this)
-      auctionsWithCorrectStatus.forEach(auction => {
-        if (auction.status !== data.find(a => a.id === auction.id).status) {
-          updateAuctionStatusIfNeeded(auction.id, auction);
+
+      // compute correct statuses immediately for UI
+      const withStatus = data.map((a) => ({ ...a, status: getAuctionStatus(a) }));
+      setAuctions(withStatus);
+
+      // update db in background if needed
+      for (const a of withStatus) {
+        const original = data.find((x) => x.id === a.id);
+        if (original && original.status !== a.status) {
+          updateAuctionStatusIfNeeded(a.id, a);
         }
-      });
-      
+      }
+
       setError('');
     } catch (err) {
       console.error('Error fetching auctions:', err);
@@ -70,207 +79,253 @@ export default function AuctionsPage() {
     }
   };
 
-  // Filter auctions based on selected tab
-  const filteredAuctions = auctions.filter(auction => {
-    if (filter === 'all') return true;
-    return auction.status === filter;
-  });
+  useEffect(() => {
+    fetchAuctions();
+  }, []);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  // ---------- Status poll (safe) ----------
+  useEffect(() => {
+    if (!auctions.length) return;
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      live: 'bg-red-100 text-red-800',
-      upcoming: 'bg-yellow-100 text-yellow-800',
-      ended: 'bg-gray-100 text-gray-800',
-      completed: 'bg-green-100 text-green-800',
-    };
-    const labels = {
-      live: '🔴 Live Now',
-      upcoming: '📅 Upcoming',
-      ended: '⏹️ Ended',
-      completed: '✅ Completed',
-    };
+    const interval = setInterval(async () => {
+      // IMPORTANT: use functional setState so we always read the freshest auctions
+      setAuctions((prev) => {
+        // kick off async DB updates without blocking UI
+        (async () => {
+          await Promise.all(
+            prev.map(async (auction) => {
+              const correct = getAuctionStatus(auction);
+              if (correct !== auction.status) {
+                await updateAuctionStatusIfNeeded(auction.id, { ...auction, status: correct });
+              }
+            })
+          );
+        })();
+
+        // update UI immediately
+        return prev.map((auction) => ({
+          ...auction,
+          status: getAuctionStatus(auction),
+        }));
+      });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [auctions.length]);
+
+  // ---------- Filtered list ----------
+  const filteredAuctions = useMemo(() => {
+    return auctions.filter((a) => (filter === 'all' ? true : a.status === filter));
+  }, [auctions, filter]);
+
+  const counts = useMemo(() => {
+    const c = { all: auctions.length, live: 0, upcoming: 0, ended: 0 };
+    for (const a of auctions) {
+      if (a.status === 'live') c.live++;
+      if (a.status === 'upcoming') c.upcoming++;
+      if (a.status === 'ended') c.ended++;
+    }
+    return c;
+  }, [auctions]);
+
+  // ---------- UI ----------
+  const Chip = ({ value, label, count }) => {
+    const active = filter === value;
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status] || styles.ended}`}>
-        {labels[status] || status}
-      </span>
+      <button
+        onClick={() => setFilter(value)}
+        className="rounded-full px-4 py-2 text-sm font-semibold transition-all"
+        style={{
+          border: `1px solid ${active ? 'rgba(140, 90, 60, 0.45)' : 'var(--border)'}`,
+          background: active ? 'rgba(140, 90, 60, 0.10)' : 'rgba(255,255,255,0.55)',
+          color: active ? 'var(--clay)' : 'var(--text-primary)',
+        }}
+        type="button"
+      >
+        {label}
+        <span
+          className="ml-2 rounded-full px-2 py-0.5 text-xs"
+          style={{
+            background: 'rgba(46, 42, 39, 0.06)',
+            color: 'var(--text-muted)',
+            border: `1px solid var(--border)`,
+          }}
+        >
+          {count}
+        </span>
+      </button>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-12" style={{ background: '#fff' }}>
+      <div className="container">
         {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <div className="mb-8">
+          <h1 className="font-display text-4xl font-black" style={{ color: 'var(--text-primary)' }}>
             Art Auctions
           </h1>
-          <p className="text-xl text-gray-600">
-            Participate in live auctions and bid on your favorite artworks
+          <p className="mt-2 text-base md:text-lg" style={{ color: 'var(--text-muted)' }}>
+            Participate in live auctions and bid on artworks that move you.
           </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-8">
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-6 py-2 rounded-lg font-medium transition ${
-                filter === 'all'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              All Auctions
-            </button>
-            <button
-              onClick={() => setFilter('live')}
-              className={`px-6 py-2 rounded-lg font-medium transition ${
-                filter === 'live'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              🔴 Live
-            </button>
-            <button
-              onClick={() => setFilter('upcoming')}
-              className={`px-6 py-2 rounded-lg font-medium transition ${
-                filter === 'upcoming'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📅 Upcoming
-            </button>
-            <button
-              onClick={() => setFilter('ended')}
-              className={`px-6 py-2 rounded-lg font-medium transition ${
-                filter === 'ended'
-                  ? 'bg-gray-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              ⏹️ Ended
-            </button>
-          </div>
+        {/* Filter chips */}
+        <div className="mb-10 flex flex-wrap gap-3">
+          <Chip value="all" label="All" count={counts.all} />
+          <Chip value="live" label="🔴 Live" count={counts.live} />
+          <Chip value="upcoming" label="📅 Upcoming" count={counts.upcoming} />
+          <Chip value="ended" label="⏹️ Ended" count={counts.ended} />
         </div>
 
-        {/* Loading State */}
+        {/* Loading */}
         {loading && (
           <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600"></div>
+            <div
+              className="h-12 w-12 animate-spin rounded-full border-2"
+              style={{ borderColor: 'var(--border)', borderTopColor: 'var(--clay)' }}
+            />
           </div>
         )}
 
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-            <p className="text-red-700">{error}</p>
+        {/* Error */}
+        {!loading && error && (
+          <div
+            className="rounded-xl border p-6"
+            style={{ borderColor: 'rgba(190, 58, 38, 0.25)', background: 'rgba(190, 58, 38, 0.08)' }}
+          >
+            <p style={{ color: '#8b2d1f' }}>{error}</p>
             <button
               onClick={fetchAuctions}
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+              className="mt-4 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:brightness-110"
+              style={{ background: '#8b2d1f', color: '#F5EFE6' }}
+              type="button"
             >
-              Try Again
+              Try again
             </button>
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty */}
         {!loading && !error && filteredAuctions.length === 0 && (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="text-6xl mb-4">⚡</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              No {filter !== 'all' ? filter : ''} Auctions Yet
+          <div
+            className="rounded-2xl border p-10 text-center"
+            style={{ borderColor: 'var(--border)', background: 'rgba(255,255,255,0.55)' }}
+          >
+            <div className="text-5xl mb-4">⚡</div>
+            <h3 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+              No {filter !== 'all' ? filter : ''} auctions yet
             </h3>
-            <p className="text-gray-600 mb-6">
-              {filter === 'live' 
-                ? 'There are no live auctions at the moment. Check back soon!'
+            <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              {filter === 'live'
+                ? 'There are no live auctions right now. Check back soon.'
                 : 'Check back later for upcoming auctions.'}
             </p>
+
             {filter !== 'all' && (
               <button
                 onClick={() => setFilter('all')}
-                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+                className="mt-6 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110"
+                style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                type="button"
               >
-                View All Auctions
+                View all auctions
               </button>
             )}
           </div>
         )}
 
-        {/* Auctions Grid */}
+        {/* Grid */}
         {!loading && !error && filteredAuctions.length > 0 && (
           <>
-            <div className="mb-6 text-gray-600">
-              Showing {filteredAuctions.length} {filter !== 'all' ? filter : ''} {filteredAuctions.length === 1 ? 'auction' : 'auctions'}
+            <div className="mb-6 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Showing {filteredAuctions.length}{' '}
+              {filter !== 'all' ? filter : ''} {filteredAuctions.length === 1 ? 'auction' : 'auctions'}
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredAuctions.map((auction) => (
-                <div key={auction.id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition">
-                  {/* Auction Info */}
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
-                          Artwork Auction
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          ID: {auction.id.substring(0, 8)}...
-                        </p>
-                      </div>
-                      {getStatusBadge(auction.status)}
-                    </div>
-
-                    {/* Current Bid */}
-                    <div className="bg-purple-50 rounded-lg p-4 mb-4">
-                      <div className="text-sm text-purple-700 font-medium mb-1">
-                        Current Bid
-                      </div>
-                      <div className="text-3xl font-bold text-purple-600">
-                        {formatPrice(auction.currentBid)}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        {auction.bidCount || 0} {auction.bidCount === 1 ? 'bid' : 'bids'}
-                      </div>
-                    </div>
-
-                    {/* Timing Info */}
-                    <div className="space-y-2 mb-4">
-                      {auction.status === 'live' && (
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">Ends:</span> {new Date(auction.endTime).toLocaleString()}
+                <Link key={auction.id} href={`/auctions/${auction.id}`} className="group block">
+                  <div
+                    className="overflow-hidden rounded-2xl border transition-shadow duration-300"
+                    style={{
+                      borderColor: 'var(--border)',
+                      background: 'rgba(255,255,255,0.55)',
+                      boxShadow: 'var(--shadow-card)',
+                    }}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            Artwork Auction
+                          </h3>
+                          <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                            ID: {auction.id?.substring(0, 8)}...
+                          </p>
                         </div>
-                      )}
-                      {auction.status === 'upcoming' && (
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">Starts:</span> {new Date(auction.startTime).toLocaleString()}
-                        </div>
-                      )}
-                      {auction.status === 'ended' && auction.winnerId && (
-                        <div className="text-sm text-green-600 font-medium">
-                          Winner: {auction.winnerId.substring(0, 8)}...
-                        </div>
-                      )}
-                    </div>
+                        {badge(auction.status)}
+                      </div>
 
-                    {/* Action Button */}
-                    <Link
-                      href={`/auctions/${auction.id}`}
-                      className="block w-full bg-purple-600 text-white text-center px-4 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
-                    >
-                      {auction.status === 'live' ? 'View Auction' : 'View Details'}
-                    </Link>
+                      {/* Bid box */}
+                      <div
+                        className="mt-5 rounded-xl border p-4"
+                        style={{
+                          borderColor: 'var(--border)',
+                          background: 'rgba(232, 216, 195, 0.35)',
+                        }}
+                      >
+                        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                          Current bid
+                        </div>
+                        <div className="mt-1 font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                          {formatPrice(auction.currentBid)}
+                        </div>
+                        <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {auction.bidCount || 0} {auction.bidCount === 1 ? 'bid' : 'bids'}
+                        </div>
+                      </div>
+
+                      {/* Timing */}
+                      <div className="mt-4 space-y-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {auction.status === 'live' && (
+                          <div>
+                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                              Ends:{' '}
+                            </span>
+                            {formatDateTime(auction.endTime)}
+                          </div>
+                        )}
+                        {auction.status === 'upcoming' && (
+                          <div>
+                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                              Starts:{' '}
+                            </span>
+                            {formatDateTime(auction.startTime)}
+                          </div>
+                        )}
+                        {auction.status === 'ended' && auction.winnerId && (
+                          <div style={{ color: 'rgba(24, 74, 52, 0.95)' }}>
+                            <span className="font-semibold">Winner:</span> {auction.winnerId.substring(0, 8)}...
+                          </div>
+                        )}
+                      </div>
+
+                      {/* CTA */}
+                      <div className="mt-6">
+                        <div
+                          className="rounded-full px-5 py-3 text-center text-sm font-semibold transition-all group-hover:brightness-110"
+                          style={{
+                            background: auction.status === 'live' ? 'rgba(190, 58, 38, 0.90)' : 'var(--clay)',
+                            color: '#F5EFE6',
+                          }}
+                        >
+                          {auction.status === 'live' ? 'View auction' : 'View details'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </>

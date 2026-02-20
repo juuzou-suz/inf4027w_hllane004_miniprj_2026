@@ -1,11 +1,179 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Search, X } from 'lucide-react';
+
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
+import ArtworkCard from '@/components/artworkCard';
+
+function FiltersBar({
+  styles,
+  mediums,
+  query,
+  setQuery,
+  onSubmitQuery,
+  hasResults,
+  onClearSearch,
+  filterStyle,
+  filterMedium,
+  filterMaxPrice,
+  filterAvailable,
+  onFilterStyle,
+  onFilterMedium,
+  onFilterMaxPrice,
+  onFilterAvailable,
+  onClearFilters,
+}) {
+  return (
+    <section className="border-b py-6" style={{ borderColor: 'var(--border)' }}>
+      <div className="container">
+        <div className="mb-4 flex flex-col gap-1">
+          <h2 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+            Browse artworks
+          </h2>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Search and filter without the noise.
+          </p>
+        </div>
+
+        {/* One compact row */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          {/* Small Search bar */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmitQuery();
+            }}
+            className="flex items-center rounded-full shadow-sm"
+            style={{
+              background: '#fff',
+              border: '1px solid var(--border)',
+              height: 42,
+              width: '100%',
+              maxWidth: 420,
+            }}
+          >
+            <div className="flex flex-1 items-center px-4">
+              <Search size={16} style={{ color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search artworks..."
+                className="ml-2 flex-1 bg-transparent text-sm outline-none"
+                style={{ color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="mr-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:brightness-110"
+              style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+            >
+              Search
+            </button>
+          </form>
+
+          {/* Filters next to it */}
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <select
+              value={filterStyle}
+              onChange={(e) => onFilterStyle(e.target.value)}
+              className="rounded-md border px-3 text-sm outline-none"
+              style={{
+                borderColor: 'var(--border)',
+                background: '#fff',
+                color: 'var(--text-primary)',
+                height: 42,
+              }}
+            >
+              <option value="">All styles</option>
+              {styles.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterMedium}
+              onChange={(e) => onFilterMedium(e.target.value)}
+              className="rounded-md border px-3 text-sm outline-none"
+              style={{
+                borderColor: 'var(--border)',
+                background: '#fff',
+                color: 'var(--text-primary)',
+                height: 42,
+              }}
+            >
+              <option value="">All mediums</option>
+              {mediums.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              value={filterMaxPrice}
+              onChange={(e) => onFilterMaxPrice(e.target.value)}
+              placeholder="Max ZAR"
+              className="w-28 rounded-md border px-3 text-sm outline-none"
+              style={{
+                borderColor: 'var(--border)',
+                background: '#fff',
+                color: 'var(--text-primary)',
+                height: 42,
+              }}
+            />
+
+            <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
+              <input
+                type="checkbox"
+                checked={filterAvailable}
+                onChange={(e) => onFilterAvailable(e.target.checked)}
+                style={{ accentColor: 'var(--forest)' }}
+              />
+              Available
+            </label>
+
+            {/* Actions */}
+            {hasResults && (
+              <button
+                onClick={onClearSearch}
+                className="flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium transition-colors hover:opacity-90"
+                style={{
+                  borderColor: 'var(--border)',
+                  color: 'var(--text-muted)',
+                  background: 'transparent',
+                  height: 42,
+                }}
+                type="button"
+              >
+                <X size={14} />
+                Clear search
+              </button>
+            )}
+
+            <button
+              onClick={onClearFilters}
+              className="rounded-full px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
+              style={{ color: 'var(--clay)', height: 42 }}
+              type="button"
+            >
+              Clear filters
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function ArtworksPage() {
   const { user } = useAuth();
@@ -17,6 +185,15 @@ export default function ArtworksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Search + filters
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+
+  const [filterStyle, setFilterStyle] = useState('');
+  const [filterMedium, setFilterMedium] = useState('');
+  const [filterMaxPrice, setFilterMaxPrice] = useState('');
+  const [filterAvailable, setFilterAvailable] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -26,166 +203,182 @@ export default function ArtworksPage() {
       setLoading(true);
       const [artworksData, auctionsData] = await Promise.all([
         getAllArtworks(),
-        getAllAuctions()
+        getAllAuctions(),
       ]);
       setArtworks(artworksData);
       setAuctions(auctionsData);
       setError('');
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error(err);
       setError('Failed to load artworks. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter out artworks that are in ANY auction (live, upcoming, or ended)
-  const availableArtworks = artworks.filter(artwork => {
-    // Check if artwork is in any auction
-    const inAuction = auctions.some(auction => auction.artworkId === artwork.id);
-    
-    // Show only artworks NOT in auction AND have a price
-    return !inAuction && artwork.price && artwork.status === 'available';
-  });
+  // Not in ANY auction
+  const purchasableArtworks = useMemo(() => {
+    return artworks.filter((artwork) => {
+      const inAuction = auctions.some((a) => a.artworkId === artwork.id);
+      return !inAuction && artwork.price && artwork.status === 'available';
+    });
+  }, [artworks, auctions]);
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price);
+  const styles = useMemo(
+    () => [...new Set(purchasableArtworks.map((a) => a.style).filter(Boolean))],
+    [purchasableArtworks]
+  );
+  const mediums = useMemo(
+    () => [...new Set(purchasableArtworks.map((a) => a.medium).filter(Boolean))],
+    [purchasableArtworks]
+  );
 
-  const handleAddToCart = (artwork) => {
-    if (!user) {
-      router.push(`/login?redirect=/artworks/${artwork.id}`);
+  const handleSearch = () => {
+    const prompt = (query || '').toLowerCase().trim();
+    if (!prompt) {
+      setSearchResults(null);
       return;
     }
-    addToCart(artwork);
-    alert(`"${artwork.title}" added to cart!`);
+
+    const priceMatch = prompt.match(/r\s?(\d+[\s,]?\d*)/i);
+    const maxPrice = priceMatch ? parseFloat(priceMatch[1].replace(/[\s,]/g, '')) : null;
+
+    const stopWords = new Set([
+      'the', 'and', 'for', 'with', 'that', 'this', 'want', 'looking',
+      'find', 'show', 'give', 'under', 'price', 'zar'
+    ]);
+
+    const keywords = prompt
+      .replace(/[^a-z0-9\s]/gi, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !stopWords.has(w));
+
+    const scored = purchasableArtworks.map((artwork) => {
+      const fields = [
+        artwork.title,
+        artwork.artist,
+        artwork.style,
+        artwork.medium,
+        artwork.description,
+        ...(artwork.tags || []),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      let score = 0;
+      for (const kw of keywords) {
+        if (fields.includes(kw)) score += 2;
+        if ((artwork.title || '').toLowerCase().includes(kw)) score += 3;
+        if ((artwork.style || '').toLowerCase().includes(kw)) score += 2;
+        if ((artwork.tags || []).some((t) => t.toLowerCase().includes(kw))) score += 2;
+      }
+
+      if (maxPrice && artwork.price > maxPrice) score = -1;
+      return { artwork, score };
+    });
+
+    setSearchResults(
+      scored
+        .filter((s) => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((s) => s.artwork)
+    );
   };
 
+  const clearSearch = () => {
+    setQuery('');
+    setSearchResults(null);
+  };
+
+  const applyFilters = (list) =>
+    list.filter((a) => {
+      if (filterStyle && a.style !== filterStyle) return false;
+      if (filterMedium && a.medium !== filterMedium) return false;
+      if (filterMaxPrice && a.price > parseFloat(filterMaxPrice)) return false;
+      if (filterAvailable && a.status !== 'available') return false;
+      return true;
+    });
+
+  const displayArtworks = applyFilters(searchResults ?? purchasableArtworks);
+  const hasResults = searchResults !== null;
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Artworks Collection
-          </h1>
-          <p className="text-xl text-gray-600">
-            Browse and purchase artworks directly from emerging artists
-          </p>
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+      <FiltersBar
+        styles={styles}
+        mediums={mediums}
+        query={query}
+        setQuery={setQuery}
+        onSubmitQuery={handleSearch}
+        hasResults={hasResults}
+        onClearSearch={clearSearch}
+        filterStyle={filterStyle}
+        filterMedium={filterMedium}
+        filterMaxPrice={filterMaxPrice}
+        filterAvailable={filterAvailable}
+        onFilterStyle={setFilterStyle}
+        onFilterMedium={setFilterMedium}
+        onFilterMaxPrice={setFilterMaxPrice}
+        onFilterAvailable={setFilterAvailable}
+        onClearFilters={() => {
+          setFilterStyle('');
+          setFilterMedium('');
+          setFilterMaxPrice('');
+          setFilterAvailable(false);
+        }}
+      />
+
+      <main className="py-16">
+        <div className="container">
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <div
+                className="h-10 w-10 animate-spin rounded-full border-2"
+                style={{ borderColor: 'var(--border)', borderTopColor: 'var(--clay)' }}
+              />
+            </div>
+          ) : error ? (
+            <div
+              className="rounded-xl border p-6"
+              style={{
+                background: 'rgba(140, 90, 60, 0.06)',
+                borderColor: 'var(--clay)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <p>{error}</p>
+              <button
+                onClick={fetchData}
+                className="mt-4 rounded-full px-5 py-2 text-sm font-semibold"
+                style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+              >
+                Try Again
+              </button>
+            </div>
+          ) : displayArtworks.length === 0 ? (
+            <div className="py-24 text-center">
+              <h3 className="font-display text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+                No matches
+              </h3>
+              <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                Try clearing filters or searching different keywords.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-8 text-sm" style={{ color: 'var(--text-muted)' }}>
+                Showing {displayArtworks.length} result{displayArtworks.length !== 1 ? 's' : ''}
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {displayArtworks.map((artwork) => (
+                  <ArtworkCard key={artwork.id} artwork={artwork} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600"></div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-            <p className="text-red-700">{error}</p>
-            <button
-              onClick={fetchData}
-              className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && !error && availableArtworks.length === 0 && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🎨</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              No Artworks Available for Purchase
-            </h3>
-            <p className="text-gray-600 mb-6">
-              All artworks are currently in auctions. Check the auctions page!
-            </p>
-            <Link
-              href="/auctions"
-              className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
-            >
-              View Auctions
-            </Link>
-          </div>
-        )}
-
-        {/* Artworks Grid */}
-        {!loading && !error && availableArtworks.length > 0 && (
-          <>
-            <div className="mb-6 text-gray-600">
-              {availableArtworks.length} artwork{availableArtworks.length === 1 ? '' : 's'} available for purchase
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {availableArtworks.map((artwork) => (
-                <div
-                  key={artwork.id}
-                  className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition group"
-                >
-                  {/* Image */}
-                  <Link href={`/artworks/${artwork.id}`}>
-                    <div className="relative overflow-hidden h-52">
-                      <img
-                        src={artwork.imageUrl || 'https://via.placeholder.com/400x300?text=No+Image'}
-                        alt={artwork.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      />
-                    </div>
-                  </Link>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <Link href={`/artworks/${artwork.id}`}>
-                      <h3 className="font-bold text-gray-900 text-lg mb-1 truncate hover:text-purple-600 transition">
-                        {artwork.title}
-                      </h3>
-                    </Link>
-                    <p className="text-gray-600 text-sm mb-2">by {artwork.artist}</p>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {artwork.style && (
-                        <span className="bg-purple-50 text-purple-700 text-xs px-2 py-1 rounded-full">
-                          {artwork.style}
-                        </span>
-                      )}
-                      {artwork.medium && (
-                        <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full">
-                          {artwork.medium}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Price & Button */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500">Price</p>
-                        <p className="text-xl font-bold text-purple-600">
-                          {formatPrice(artwork.price)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleAddToCart(artwork)}
-                        className="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
-                      >
-                        Add to Cart
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      </main>
     </div>
   );
 }

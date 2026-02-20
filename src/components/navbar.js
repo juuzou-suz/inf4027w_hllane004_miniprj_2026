@@ -1,166 +1,149 @@
 'use client';
 
 import Link from 'next/link';
+import { ShoppingCart, Menu, X } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { getCartCount } = useCart();
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const isAdmin = user?.role === 'admin';
-  const isCustomer = user && !isAdmin;
-  const isGuest = !user;
-
   const isActive = (path) => pathname === path;
   const isActivePrefix = (path) => pathname.startsWith(path);
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
+      <div className="container flex h-16 items-center justify-between">
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl">🎨</span>
-            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Curate
-            </span>
+        {/* Logo */}
+        <Link
+          href="/"
+          className="font-display text-2xl font-bold text-foreground tracking-tight"
+        >
+          Curate.
+        </Link>
+
+        {/* Desktop Nav */}
+        <nav className="hidden items-center gap-8 font-sans text-sm md:flex">
+          <Link
+            href="/"
+            className={`font-medium transition-colors hover:text-primary ${isActive('/') ? 'text-primary' : 'text-foreground'}`}
+          >
+            Home
           </Link>
+          <Link
+            href="/artworks"
+            className={`font-medium transition-colors hover:text-primary ${isActivePrefix('/artworks') ? 'text-primary' : 'text-muted-foreground'}`}
+          >
+            Artworks
+          </Link>
+          <Link
+            href="/auctions"
+            className={`font-medium transition-colors hover:text-primary ${isActivePrefix('/auctions') ? 'text-primary' : 'text-muted-foreground'}`}
+          >
+            Auctions
+          </Link>
+          {user && !isAdmin && (
+            <Link
+              href="/profile"
+              className={`font-medium transition-colors hover:text-primary ${isActivePrefix('/profile') ? 'text-primary' : 'text-muted-foreground'}`}
+            >
+              Profile
+            </Link>
+          )}
+        </nav>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+        {/* Desktop Right */}
+        <div className="flex items-center gap-4">
+          {/* Cart — non-admins only */}
+          {!isAdmin && (
+            <Link href="/cart" className="relative text-foreground transition-colors hover:text-primary">
+              <ShoppingCart size={20} />
+              {getCartCount() > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary font-sans text-[10px] font-bold text-primary-foreground">
+                  {getCartCount()}
+                </span>
+              )}
+            </Link>
+          )}
 
-            {/* CUSTOMER NAVIGATION */}
-            {isCustomer && (
-              <>
-                <Link href="/" className={`font-medium transition ${isActive('/') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Home
-                </Link>
-                <Link href="/artworks" className={`font-medium transition ${isActivePrefix('/artworks') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Artworks
-                </Link>
-                <Link href="/auctions" className={`font-medium transition ${isActivePrefix('/auctions') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Auctions
-                </Link>
-                <Link href="/profile" className={`font-medium transition ${isActivePrefix('/profile') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Profile
-                </Link>
-              </>
-            )}
+          {/* Auth */}
+          {user ? (
+            <div className="hidden items-center gap-3 md:flex">
+              {!isAdmin && (
+                <span className="max-w-[140px] truncate font-sans text-sm text-muted-foreground">
+                  {user.email}
+                </span>
+              )}
+              <button
+                onClick={logout}
+                className="rounded-full border border-border px-5 py-2 font-sans text-sm font-semibold text-foreground transition-all hover:bg-muted"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden rounded-full bg-primary px-5 py-2 font-sans text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 md:inline-block"
+            >
+              Sign In
+            </Link>
+          )}
 
-            {/* GUEST NAVIGATION */}
-            {isGuest && (
-              <>
-                <Link href="/" className={`font-medium transition ${isActive('/') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Home
-                </Link>
-                <Link href="/artworks" className={`font-medium transition ${isActivePrefix('/artworks') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Artworks
-                </Link>
-                <Link href="/auctions" className={`font-medium transition ${isActivePrefix('/auctions') ? 'text-purple-600' : 'text-gray-700 hover:text-purple-600'}`}>
-                  Auctions
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Desktop Right Side: Cart + Auth */}
-          <div className="hidden md:flex items-center space-x-4">
-
-            {/* Cart Icon - Customers and Guests only */}
-            {!isAdmin && (
-              <Link href="/cart" className="relative p-1">
-                <svg className="w-6 h-6 text-gray-700 hover:text-purple-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                {getCartCount() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {getCartCount()}
-                  </span>
-                )}
-              </Link>
-            )}
-
-            {/* Auth Buttons */}
-            {user ? (
-              <div className="flex items-center space-x-3">
-                {isCustomer && (
-                  <Link href="/profile" className="text-sm text-gray-600 hover:text-purple-600 max-w-[150px] truncate transition">
-                    {user.email}
-                  </Link>
-                )}
-                <button onClick={logout} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium text-sm">
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <Link href="/login" className="text-gray-700 hover:text-purple-600 font-medium transition">
-                  Log In
-                </Link>
-                <Link href="/register" className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition font-medium">
-                  Register
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-100">
-            {mobileMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
+          {/* Mobile toggle */}
+          <button
+            className="text-foreground md:hidden"
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
+      </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 space-y-3">
-            {isCustomer && (
-              <>
-                <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Home</Link>
-                <Link href="/artworks" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Artworks</Link>
-                <Link href="/auctions" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Auctions</Link>
-                <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Profile</Link>
-                <Link href="/cart" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">
-                  Cart {getCartCount() > 0 && `(${getCartCount()})`}
-                </Link>
-              </>
+      {/* Mobile Menu */}
+      {open && (
+        <div className="border-t border-border bg-background px-6 py-6 md:hidden">
+          <nav className="flex flex-col gap-4 font-sans text-base">
+            <Link href="/" className="font-medium text-foreground" onClick={() => setOpen(false)}>Collection</Link>
+            <Link href="/auctions" className="text-muted-foreground" onClick={() => setOpen(false)}>Auctions</Link>
+            <Link href="/artworks" className="text-muted-foreground" onClick={() => setOpen(false)}>Artworks</Link>
+            {user && !isAdmin && (
+              <Link href="/profile" className="text-muted-foreground" onClick={() => setOpen(false)}>Profile</Link>
             )}
-            {isGuest && (
-              <>
-                <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Home</Link>
-                <Link href="/artworks" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Artworks</Link>
-                <Link href="/auctions" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Auctions</Link>
-                <Link href="/cart" onClick={() => setMobileMenuOpen(false)} className="block font-medium text-gray-700 hover:text-purple-600 py-1">Cart</Link>
-              </>
+            {!isAdmin && (
+              <Link href="/cart" className="text-muted-foreground" onClick={() => setOpen(false)}>
+                Cart {getCartCount() > 0 && `(${getCartCount()})`}
+              </Link>
             )}
-            <div className="border-t border-gray-200 pt-3">
+            <div className="mt-2 border-t border-border pt-4">
               {user ? (
-                <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium">
-                  Logout
+                <button
+                  onClick={() => { logout(); setOpen(false); }}
+                  className="w-full rounded-full border border-border py-2.5 font-sans text-sm font-semibold text-foreground transition hover:bg-muted"
+                >
+                  Log out
                 </button>
               ) : (
-                <div className="space-y-2">
-                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block text-center text-gray-700 hover:text-purple-600 font-medium py-2">Log In</Link>
-                  <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="block text-center bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition font-medium">Register</Link>
-                </div>
+                <Link
+                  href="/login"
+                  className="block rounded-full bg-primary px-5 py-2.5 text-center font-sans text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
+                  onClick={() => setOpen(false)}
+                >
+                  Sign In
+                </Link>
               )}
             </div>
-          </div>
-        )}
-      </div>
-    </nav>
+          </nav>
+        </div>
+      )}
+    </header>
   );
 }
