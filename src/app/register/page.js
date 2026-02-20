@@ -8,46 +8,70 @@ import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export default function RegisterPage() {
+  // useRouter allows us to redirect users after successful registration
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') ? decodeURIComponent(searchParams.get('redirect')) : '/';
 
+  // Form state - stores what user types in the form
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // UI state - controls loading and error messages
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+
+  // Handle form submission
   const handleRegister = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevents page from refreshing when form is submitted
+    
+    // Clear any previous errors
     setError('');
 
+    // Validation - check if passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
-      return;
+      return; // Stop here, don't proceed with registration
     }
 
+    // Validation - check password length
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
     }
 
+    // Show loading state (disables button, shows "Registering...")
     setLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Step 1: Create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      // Extract user info
       const user = userCredential.user;
 
+      // Step 2: Create user document in Firestore database
+      // This stores additional user info (like role)
       await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
-        role: 'customer',
+        role: 'customer', // Default role for new users
         createdAt: new Date().toISOString(),
       });
 
+      // Success! Redirect to homepage
       router.push(redirectUrl);
+
     } catch (error) {
+      // Handle errors
       console.error('Registration error:', error);
 
+      // Show user-friendly error messages
       if (error.code === 'auth/email-already-in-use') {
         setError('This email is already registered. Please log in instead.');
       } else if (error.code === 'auth/invalid-email') {
@@ -58,131 +82,109 @@ export default function RegisterPage() {
         setError('Registration failed. Please try again.');
       }
 
-      setLoading(false);
+      setLoading(false); // Stop loading state
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: 'var(--background)' }}>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-semibold mb-3" style={{ color: 'var(--text-primary)', letterSpacing: '0.03em' }}>
-            Join Curate
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            🎨 Join Curate
           </h1>
-          <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
-            Create an account to start collecting
+          <p className="text-gray-600">
+            Create an account to start bidding on artworks
           </p>
         </div>
 
-        <div className="p-8 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderRadius: '4px' }}>
-          {error && (
-            <div className="mb-6 p-4 border" style={{ 
-              background: 'rgba(184, 103, 79, 0.1)', 
-              borderColor: '#B8674F',
-              color: '#6B4226',
-              borderRadius: '4px'
-            }}>
-              {error}
-            </div>
-          )}
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleRegister} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-                EMAIL ADDRESS
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3"
-                placeholder="you@example.com"
-                disabled={loading}
-                style={{ 
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-                PASSWORD
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3"
-                placeholder="At least 6 characters"
-                disabled={loading}
-                style={{ 
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-                CONFIRM PASSWORD
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3"
-                placeholder="Re-enter your password"
-                disabled={loading}
-                style={{ 
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
+        {/* Registration Form */}
+        <form onSubmit={handleRegister} className="space-y-6">
+          {/* Email Input */}
+          <div>
+            <label 
+              htmlFor="email" 
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+              placeholder="you@example.com"
               disabled={loading}
-              className="w-full py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: 'var(--clay)',
-                color: '#F5EFE6',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                fontSize: '0.875rem',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
-          </form>
+            />
+          </div>
 
-          <p className="text-center mt-6" style={{ color: 'var(--text-muted)' }}>
-            Already have an account?{' '}
-            <Link 
-              href={`/login${redirectUrl !== '/' ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
-              className="font-semibold"
-              style={{ color: 'var(--clay)' }}
+          {/* Password Input */}
+          <div>
+            <label 
+              htmlFor="password" 
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Log in
-            </Link>
-          </p>
-        </div>
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+              placeholder="At least 6 characters"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Confirm Password Input */}
+          <div>
+            <label 
+              htmlFor="confirmPassword" 
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+              placeholder="Re-enter your password"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Register Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
+
+        {/* Login Link */}
+<Link 
+  href={`/login${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
+  className="text-purple-600 font-semibold hover:underline"
+>
+  Log in
+</Link>
       </div>
     </div>
   );

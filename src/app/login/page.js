@@ -11,7 +11,7 @@ import { db } from '@/lib/firebase';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') ? decodeURIComponent(searchParams.get('redirect')) : '/';
+  const redirectUrl = searchParams.get('redirect') || '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,14 +25,19 @@ export default function LoginPage() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      const userData = userDoc.data();
 
-      if (userData?.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push(redirectUrl);
-      }
+// Fetch user role from Firestore to determine redirect
+const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+const userData = userDoc.data();
+
+if (userData?.role === 'admin') {
+  // Admins always go to admin dashboard
+  router.push('/admin');
+} else {
+  // Customers go to their intended page or home
+  router.push(redirectUrl);
+}
+
     } catch (error) {
       console.error('Login error:', error);
 
@@ -55,104 +60,74 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: 'var(--background)' }}>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-semibold mb-3" style={{ color: 'var(--text-primary)', letterSpacing: '0.03em' }}>
-            Welcome Back
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            🎨 Welcome Back
           </h1>
-          <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
-            Log in to continue
+          <p className="text-gray-600">
+            Log in to continue bidding on artworks
           </p>
         </div>
 
-        <div className="p-8 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', borderRadius: '4px' }}>
-          {error && (
-            <div className="mb-6 p-4 border" style={{ 
-              background: 'rgba(184, 103, 79, 0.1)', 
-              borderColor: '#B8674F',
-              color: '#6B4226',
-              borderRadius: '4px'
-            }}>
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-                EMAIL ADDRESS
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3"
-                placeholder="you@example.com"
-                disabled={loading}
-                style={{ 
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
-                PASSWORD
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3"
-                placeholder="Enter your password"
-                disabled={loading}
-                style={{ 
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email Address
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              placeholder="you@example.com"
               disabled={loading}
-              className="w-full py-3 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: 'var(--clay)',
-                color: '#F5EFE6',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                fontSize: '0.875rem',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? 'Logging in...' : 'Log In'}
-            </button>
-          </form>
+            />
+          </div>
 
-          <p className="text-center mt-6" style={{ color: 'var(--text-muted)' }}>
-            Don't have an account?{' '}
-            <Link 
-              href={`/register${redirectUrl !== '/' ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
-              className="font-semibold"
-              style={{ color: 'var(--clay)' }}
-            >
-              Register here
-            </Link>
-          </p>
-        </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              placeholder="Enter your password"
+              disabled={loading}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Logging in...' : 'Log In'}
+          </button>
+        </form>
+
+        <p className="text-center text-gray-600 mt-6">
+          Don't have an account?{' '}
+          <Link 
+            href={`/register${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
+            className="text-blue-600 font-semibold hover:underline"
+          >
+            Register here
+          </Link>
+        </p>
       </div>
     </div>
   );

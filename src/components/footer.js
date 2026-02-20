@@ -9,59 +9,47 @@ export default function Footer() {
   const pathname = usePathname();
   const currentYear = new Date().getFullYear();
 
+  // Hide footer for admins and on admin pages
   if (user?.role === 'admin' || pathname.startsWith('/admin')) {
     return null;
   }
 
   return (
-    <footer className="mt-auto border-t" style={{ 
-      background: 'var(--surface)', 
-      borderColor: 'var(--border)',
-      color: 'var(--text-muted)'
-    }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+    <footer className="bg-gray-900 text-gray-300 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2">
-            <div className="mb-6">
-              <span className="text-2xl font-semibold" style={{ 
-                color: 'var(--text-primary)',
-                letterSpacing: '0.05em'
-              }}>
-                CURATE
-              </span>
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-3xl">🎨</span>
+              <span className="text-2xl font-bold text-white">Curate</span>
             </div>
-            <p className="mb-4 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              Connecting emerging artists and collectors through contemporary art auctions.
+            <p className="text-gray-400 mb-4">
+              Bringing emerging artists and art collectors together through
+              real-time online auctions.
             </p>
-            <p className="text-sm" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>
-              UCT INF4027W Web Development Project
+            <p className="text-sm text-gray-500">
+              UCT INF4027W Web Development Mini Project
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4 text-sm" style={{ 
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Navigate
-            </h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-sm transition-colors hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+                <Link href="/" className="hover:text-purple-400 transition">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/artworks" className="text-sm transition-colors hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+                <Link href="/artworks" className="hover:text-purple-400 transition">
                   Artworks
                 </Link>
               </li>
               <li>
-                <Link href="/auctions" className="text-sm transition-colors hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+                <Link href="/auctions" className="hover:text-purple-400 transition">
                   Auctions
                 </Link>
               </li>
@@ -70,27 +58,21 @@ export default function Footer() {
 
           {/* Account */}
           <div>
-            <h3 className="font-semibold mb-4 text-sm" style={{ 
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              Account
-            </h3>
-            <ul className="space-y-3">
+            <h3 className="text-white font-semibold mb-4">Account</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/login" className="text-sm transition-colors hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+                <Link href="/login" className="hover:text-purple-400 transition">
                   Log In
                 </Link>
               </li>
               <li>
-                <Link href="/register" className="text-sm transition-colors hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
+                <Link href="/register" className="hover:text-purple-400 transition">
                   Register
                 </Link>
               </li>
               <li>
-                <Link href="/profile" className="text-sm transition-colors hover:opacity-70" style={{ color: 'var(--text-muted)' }}>
-                  Profile
+                <Link href="/" className="hover:text-purple-400 transition">
+                  Dashboard
                 </Link>
               </li>
             </ul>
@@ -98,8 +80,8 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t mt-12 pt-8" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-sm text-center" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>
+        <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-sm text-gray-500">
             © {currentYear} Curate. All rights reserved.
           </p>
         </div>
