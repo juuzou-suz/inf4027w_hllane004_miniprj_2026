@@ -16,12 +16,8 @@ import {
 import ArtworkCard from '@/components/artworkCard';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 
-/* ──────────────────────────────────────────────────────────────
-   Hero Slides (public/Images)
-   IMPORTANT: case-sensitive filenames in production.
-   Make sure these EXACT paths exist:
-   /public/Images/hero1.jpg ... hero5.jpg
-────────────────────────────────────────────────────────────── */
+
+// Hero Slides
 const slides = [
   {
     image: '/Images/hero1.jpg',
@@ -119,7 +115,7 @@ function HeroSlideshow() {
             <h1
               key={`title-${current}`}
               className="font-display text-4xl font-black leading-tight animate-fade-in md:text-6xl lg:text-6xl"
-              style={{ color: 'var(--background)' }}
+              style={{ color: 'rgba(245, 239, 230, 0.84)' }}
             >
               {slides[current].title}
             </h1>
@@ -153,7 +149,7 @@ function HeroSlideshow() {
                 className="rounded-full border px-7 py-3.5 text-sm font-semibold transition-all hover:bg-white/10"
                 style={{
                   borderColor: 'rgba(245, 239, 230, 0.25)',
-                  color: 'var(--background)',
+                  color: '#F5EFE6',
                 }}
               >
                 View Auctions
@@ -259,8 +255,8 @@ function SearchSection({
             <span
               className="rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap"
               style={{
-                background: 'rgba(175, 114, 35, 0.45)', // forest tint
-                color: 'var(--forest)',
+                background: 'rgba(175, 114, 35, 0.45)',
+                color: 'rgba(245, 239, 230, 0.84)',
                 border: '1px solid rgba(24, 74, 52, 0.18)',
               }}
             >
@@ -356,17 +352,17 @@ function WhyChooseSection() {
             >
               <div
                 className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
-                style={{ background: 'rgba(24, 74, 52, 0.10)' }}
+                style={{ background: 'rgba(24, 74, 61, 0.1)' }}
               >
-                <f.icon size={22} style={{ color: 'var(--forest)' }} />
+                <f.icon size={22} style={{ color: 'rgba(8, 8, 8, 0.7)'  }} />
               </div>
               <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {f.title}
               </h3>
-              <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--forest)' }}>
+              <p className="mt-1 text-sm font-semibold" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>
                 {f.tagline}
               </p>
-              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'rgba(8, 8, 8, 0.7)'  }}>
                 {f.description}
               </p>
             </div>
@@ -473,12 +469,27 @@ export default function Home() {
 
   const displayArtworks = applyFilters(searchResults ?? artworks);
 
-  const featuredArtworks = artworks
-    .filter((a) => {
-      const inAuction = auctions.some((au) => au.artworkId === a.id);
-      return !inAuction && a.price && a.status === 'available';
-    })
-    .slice(0, 4);
+  const purchasableArtworks = artworks.filter((a) => {
+    const inAuction = auctions.some((au) => au.artworkId === a.id);
+    return !inAuction && a.price && a.status === 'available';
+  });
+
+  const sortByNewest = (list) =>
+    list.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+      return dateB - dateA;
+    });
+
+  const featuredFirst = sortByNewest(
+    purchasableArtworks.filter((a) => a.featured === true)
+  );
+
+  const fillRest = sortByNewest(
+    purchasableArtworks.filter((a) => a.featured !== true)
+  );
+
+const featuredArtworks = [...featuredFirst, ...fillRest].slice(0, 4);
 
   const hasResults = searchResults !== null;
 
@@ -568,7 +579,7 @@ export default function Home() {
               <div className="mb-8 flex items-center justify-between">
                 <div>
                   <h2 className="font-display text-3xl font-black" style={{ color: 'var(--text-primary)' }}>
-                    Featured Collection
+                    Featured Artworks
                   </h2>
                   <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                     Curated pieces available for purchase
@@ -578,7 +589,7 @@ export default function Home() {
                 <Link
                   href="/artworks"
                   className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
-                  style={{ color: 'var(--forest)' }}
+                  style={{ color: 'rgba(245, 239, 230, 0.84)'}}
                 >
                   View all
                   <ArrowRight size={16} />
