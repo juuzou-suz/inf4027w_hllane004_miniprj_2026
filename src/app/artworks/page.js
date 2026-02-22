@@ -1,14 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 
-import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import ArtworkCard from '@/components/artworkCard';
+import { parseSearchWithAI, basicKeywordSearch } from '@/lib/aiSearch';
 
 function FiltersBar({
   styles,
@@ -16,7 +13,7 @@ function FiltersBar({
   query,
   setQuery,
   onSubmitQuery,
-  hasResults,
+  hasSearch,
   onClearSearch,
   filterStyle,
   filterMedium,
@@ -40,9 +37,7 @@ function FiltersBar({
           </p>
         </div>
 
-        {/* One compact row */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-          {/* Small Search bar */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -78,7 +73,6 @@ function FiltersBar({
             </button>
           </form>
 
-          {/* Filters next to it */}
           <div className="flex flex-1 flex-wrap items-center gap-2">
             <select
               value={filterStyle}
@@ -132,18 +126,7 @@ function FiltersBar({
               }}
             />
 
-            <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
-              <input
-                type="checkbox"
-                checked={filterAvailable}
-                onChange={(e) => onFilterAvailable(e.target.checked)}
-                style={{ accentColor: 'var(--forest)' }}
-              />
-              Available
-            </label>
-
-            {/* Actions */}
-            {hasResults && (
+            {hasSearch && (
               <button
                 onClick={onClearSearch}
                 className="flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium transition-colors hover:opacity-90"
@@ -176,16 +159,11 @@ function FiltersBar({
 }
 
 export default function ArtworksPage() {
-  const { user } = useAuth();
-  const { addToCart } = useCart();
-  const router = useRouter();
-
   const [artworks, setArtworks] = useState([]);
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Search + filters
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
 
@@ -201,10 +179,7 @@ export default function ArtworksPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [artworksData, auctionsData] = await Promise.all([
-        getAllArtworks(),
-        getAllAuctions(),
-      ]);
+      const [artworksData, auctionsData] = await Promise.all([getAllArtworks(), getAllAuctions()]);
       setArtworks(artworksData);
       setAuctions(auctionsData);
       setError('');
@@ -216,7 +191,6 @@ export default function ArtworksPage() {
     }
   };
 
-  // Not in ANY auction
   const purchasableArtworks = useMemo(() => {
     return artworks.filter((artwork) => {
       const inAuction = auctions.some((a) => a.artworkId === artwork.id);
@@ -228,61 +202,27 @@ export default function ArtworksPage() {
     () => [...new Set(purchasableArtworks.map((a) => a.style).filter(Boolean))],
     [purchasableArtworks]
   );
+
   const mediums = useMemo(
     () => [...new Set(purchasableArtworks.map((a) => a.medium).filter(Boolean))],
     [purchasableArtworks]
   );
 
-  const handleSearch = () => {
-    const prompt = (query || '').toLowerCase().trim();
-    if (!prompt) {
+  const handleSearch = async () => {
+    const q = (query || '').trim();
+    if (!q) {
       setSearchResults(null);
       return;
     }
 
-    const priceMatch = prompt.match(/r\s?(\d+[\s,]?\d*)/i);
-    const maxPrice = priceMatch ? parseFloat(priceMatch[1].replace(/[\s,]/g, '')) : null;
+    const { results, useBasicSearch } = await parseSearchWithAI(q, purchasableArtworks);
 
-    const stopWords = new Set([
-      'the', 'and', 'for', 'with', 'that', 'this', 'want', 'looking',
-      'find', 'show', 'give', 'under', 'price', 'zar'
-    ]);
-
-    const keywords = prompt
-      .replace(/[^a-z0-9\s]/gi, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !stopWords.has(w));
-
-    const scored = purchasableArtworks.map((artwork) => {
-      const fields = [
-        artwork.title,
-        artwork.artist,
-        artwork.style,
-        artwork.medium,
-        artwork.description,
-        ...(artwork.tags || []),
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      let score = 0;
-      for (const kw of keywords) {
-        if (fields.includes(kw)) score += 2;
-        if ((artwork.title || '').toLowerCase().includes(kw)) score += 3;
-        if ((artwork.style || '').toLowerCase().includes(kw)) score += 2;
-        if ((artwork.tags || []).some((t) => t.toLowerCase().includes(kw))) score += 2;
-      }
-
-      if (maxPrice && artwork.price > maxPrice) score = -1;
-      return { artwork, score };
-    });
-
-    setSearchResults(
-      scored
-        .filter((s) => s.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map((s) => s.artwork)
-    );
+    if (useBasicSearch) {
+      const basicResults = basicKeywordSearch(q, purchasableArtworks);
+      setSearchResults(basicResults);
+    } else {
+      setSearchResults(results);
+    }
   };
 
   const clearSearch = () => {
@@ -300,7 +240,7 @@ export default function ArtworksPage() {
     });
 
   const displayArtworks = applyFilters(searchResults ?? purchasableArtworks);
-  const hasResults = searchResults !== null;
+  const hasSearch = searchResults !== null;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -310,7 +250,7 @@ export default function ArtworksPage() {
         query={query}
         setQuery={setQuery}
         onSubmitQuery={handleSearch}
-        hasResults={hasResults}
+        hasSearch={hasSearch}
         onClearSearch={clearSearch}
         filterStyle={filterStyle}
         filterMedium={filterMedium}

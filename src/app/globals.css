@@ -10,10 +10,6 @@
   --text-muted: #6F665E;   /* warm grey */
   --border: #D4C5B9;
 
-  /* Accent (dark green fits your vibe) */
-  --forest: #184A34;
-  --forest-dark: #123726;
-
   /* Subtle overlays */
   --overlay: rgba(140, 90, 60, 0.08);
 
@@ -51,9 +47,6 @@
     --text-primary: #F3ECE4;
     --text-muted: #C5B8AD;
     --border: #3D3530;
-
-    --forest: #3A7A57;
-    --forest-dark: #2B6144;
 
     --overlay: rgba(160, 106, 75, 0.12);
 
