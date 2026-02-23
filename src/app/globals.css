@@ -1,93 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  /* Base palette */
-  --background: #F5EFE6;   /* warm sand */
-  --surface: #E8D8C3;      /* soft beige cards */
-  --clay: #8C5A3C;         /* terracotta */
-  --clay-dark: #6B4226;    /* deep brown */
-  --text-primary: #2E2A27; /* charcoal */
-  --text-muted: #6F665E;   /* warm grey */
-  --border: #D4C5B9;
+  --background: #1E1A17;
+  --surface: #2A241F;
+  --clay: #A06A4B;
+  --clay-dark: #8C5A3C;
+  --text-primary: #F3ECE4;
+  --text-muted: #C5B8AD;
+  --border: #3D3530;
 
-  /* Subtle overlays */
-  --overlay: rgba(140, 90, 60, 0.08);
+  --overlay: rgba(160, 106, 75, 0.12);
 
-  /* Hero overlays (USED by your slideshow) */
   --hero-overlay: linear-gradient(
     to top,
-    rgba(18, 15, 13, 0.82),
-    rgba(18, 15, 13, 0.38),
-    rgba(18, 15, 13, 0.12)
+    rgba(0, 0, 0, 0.78),
+    rgba(0, 0, 0, 0.35),
+    rgba(0, 0, 0, 0.10)
   );
 
   --hero-warm-wash: radial-gradient(
       900px 560px at 20% 25%,
-      rgba(140, 90, 60, 0.22),
+      rgba(160, 106, 75, 0.16),
       transparent 60%
     ),
     radial-gradient(
       900px 560px at 85% 20%,
-      rgba(24, 74, 52, 0.18),
+      rgba(58, 122, 87, 0.14),
       transparent 55%
     );
 
-  --shadow-hero-btn: 0 18px 40px rgba(0, 0, 0, 0.22);
+  --shadow-hero-btn: 0 18px 40px rgba(0, 0, 0, 0.35);
 
-  /* Layout helper */
-  --container-max: 80rem; /* ~1280px */
+  --container-max: 80rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1E1A17;
-    --surface: #2A241F;
-    --clay: #A06A4B;
-    --clay-dark: #8C5A3C;
-    --text-primary: #F3ECE4;
-    --text-muted: #C5B8AD;
-    --border: #3D3530;
-
-    --overlay: rgba(160, 106, 75, 0.12);
-
-    --hero-overlay: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.78),
-      rgba(0, 0, 0, 0.35),
-      rgba(0, 0, 0, 0.10)
-    );
-
-    --hero-warm-wash: radial-gradient(
-        900px 560px at 20% 25%,
-        rgba(160, 106, 75, 0.16),
-        transparent 60%
-      ),
-      radial-gradient(
-        900px 560px at 85% 20%,
-        rgba(58, 122, 87, 0.14),
-        transparent 55%
-      );
-
-    --shadow-hero-btn: 0 18px 40px rgba(0, 0, 0, 0.35);
-  }
-}
-
-/* Tailwind “theme” bridge (you were using bg-background etc) */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--text-primary);
   --color-card: var(--surface);
   --color-border: var(--border);
   --color-muted-foreground: var(--text-muted);
-
-  /* Use CLAY as your “primary” so className="bg-primary" works */
   --color-primary: var(--clay);
   --color-primary-foreground: #F5EFE6;
+  --color-muted: rgba(255, 255, 255, 0.06);
+  --color-secondary: rgba(255, 255, 255, 0.08);
+  --color-secondary-foreground: var(--text-primary);
+  --color-accent: rgba(255, 255, 255, 0.10);
+  --color-accent-foreground: var(--text-primary);
+  --color-input: var(--border);
+  --color-ring: var(--clay);
 }
-
-/* ==========================================================================
-   Base / Typography / Layout helpers
-   ========================================================================== */
 
 * {
   transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
@@ -105,7 +67,6 @@ body {
   position: relative;
 }
 
-/* Subtle paper texture */
 body::before {
   content: "";
   position: fixed;
@@ -118,7 +79,6 @@ body::before {
   z-index: 9999;
 }
 
-/* Container utility (so your "container" class exists even if Tailwind config doesn't) */
 .container {
   width: 100%;
   max-width: var(--container-max);
@@ -151,8 +111,9 @@ input[type="search"],
 textarea,
 select {
   color: var(--text-primary);
-  background-color: transparent;   /* ← remove var(--surface) */
-  border: none;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
 }
 
 input::placeholder,
@@ -174,16 +135,11 @@ select:focus {
   color: #F5EFE6;
 }
 
-/* ==========================================================================
-   Animations (MATCHES your component classes)
-   ========================================================================== */
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* You use "animate-fade-in" in the hero */
 .animate-fade-in {
   animation: fadeIn 0.65s ease-out forwards;
 }

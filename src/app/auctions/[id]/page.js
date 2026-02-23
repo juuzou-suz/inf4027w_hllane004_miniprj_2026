@@ -130,17 +130,21 @@ export default function AuctionDetailPage() {
   }, [auction]);
 
   const statusBadge = useMemo(() => {
-    const base = 'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold';
-    if (!auction?.status) return <span className={base} style={{ borderColor: 'var(--border)' }}>Status</span>;
+    const base =
+      'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold';
+
+    if (!auction?.status) {
+      return <span className={base + ' border-border text-muted-foreground'}>Status</span>;
+    }
 
     if (auction.status === 'live') {
       return (
         <span
           className={base}
           style={{
-            borderColor: 'rgba(190, 58, 38, 0.25)',
-            background: 'rgba(190, 58, 38, 0.10)',
-            color: 'var(--text-primary)',
+            borderColor: 'rgba(255,120,120,0.30)',
+            background: 'rgba(190,58,38,0.18)',
+            color: 'rgba(255,225,225,0.95)',
           }}
         >
           🔴 Live
@@ -153,9 +157,9 @@ export default function AuctionDetailPage() {
         <span
           className={base}
           style={{
-            borderColor: 'rgba(167, 107, 17, 0.25)',
-            background: 'rgba(167, 107, 17, 0.10)',
-            color: 'var(--text-primary)',
+            borderColor: 'rgba(255,200,120,0.28)',
+            background: 'rgba(255,200,120,0.14)',
+            color: 'rgba(255,235,205,0.95)',
           }}
         >
           📅 Upcoming
@@ -167,9 +171,9 @@ export default function AuctionDetailPage() {
       <span
         className={base}
         style={{
-          borderColor: 'rgba(111, 102, 94, 0.35)',
-          background: 'rgba(111, 102, 94, 0.10)',
-          color: 'var(--text-primary)',
+          borderColor: 'rgba(255,255,255,0.12)',
+          background: 'rgba(255,255,255,0.06)',
+          color: 'rgba(245,239,230,0.90)',
         }}
       >
         ⏹️ Ended
@@ -251,33 +255,24 @@ export default function AuctionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
-        <div
-          className="h-12 w-12 animate-spin rounded-full border-2"
-          style={{ borderColor: 'var(--border)', borderTopColor: 'var(--clay)' }}
-        />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary" />
       </div>
     );
   }
 
   if (error && !auction) {
     return (
-      <div className="min-h-screen py-10" style={{ background: 'var(--background)' }}>
+      <div className="min-h-screen bg-background py-10 text-foreground">
         <div className="container">
-          <div
-            className="rounded-2xl border p-8 text-center"
-            style={{
-              borderColor: 'rgba(190, 58, 38, 0.25)',
-              background: 'rgba(190, 58, 38, 0.08)',
-            }}
-          >
-            <h2 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+          <div className="rounded-2xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] p-8 text-center">
+            <h2 className="font-display text-2xl font-black text-[rgba(255,225,225,0.95)]">
               {error}
             </h2>
             <Link
               href="/auctions"
-              className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110"
-              style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+              className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110
+                         bg-primary text-primary-foreground"
             >
               Back to auctions
             </Link>
@@ -290,18 +285,14 @@ export default function AuctionDetailPage() {
   const minBid = (auction?.currentBid || 0) + (auction?.minimumIncrement || 0);
 
   return (
-    <div className="min-h-screen py-10" style={{ background: 'var(--background)' }}>
+    <div className="min-h-screen bg-background py-10 text-foreground">
       <div className="container">
         {/* Back */}
         <button
           onClick={() => router.back()}
-          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80"
-          style={{ color: 'var(--text-muted)' }}
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80 text-muted-foreground"
         >
-          <span
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border"
-            style={{ borderColor: 'var(--border)', background: 'rgba(245,239,230,0.55)' }}
-          >
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card">
             ←
           </span>
           Back
@@ -312,96 +303,52 @@ export default function AuctionDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Artwork image */}
             {artwork && (
-              <div
-                className="overflow-hidden rounded-2xl border"
-                style={{
-                  borderColor: 'var(--border)',
-                  background: 'rgba(245, 239, 230, 0.55)',
-                  boxShadow: 'var(--shadow-card)',
-                }}
-              >
+              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
                 <div className="relative w-full" style={{ aspectRatio: '16 / 10' }}>
-                  <img
-                    src={artwork.imageUrl}
-                    alt={artwork.title}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={artwork.imageUrl} alt={artwork.title} className="h-full w-full object-cover" />
                 </div>
               </div>
             )}
 
             {/* Artwork details */}
             {artwork && (
-              <div
-                className="rounded-2xl border p-6"
-                style={{
-                  borderColor: 'var(--border)',
-                  background: 'rgba(245, 239, 230, 0.65)',
-                  boxShadow: 'var(--shadow-card)',
-                }}
-              >
-                <h2 className="font-display text-3xl font-black" style={{ color: 'var(--text-primary)' }}>
-                  {artwork.title}
-                </h2>
-                <p className="mt-1 text-base" style={{ color: 'var(--text-muted)' }}>
-                  by <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{artwork.artist}</span>
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
+                <h2 className="font-display text-3xl font-black">{artwork.title}</h2>
+                <p className="mt-1 text-base text-muted-foreground">
+                  by <span className="font-semibold text-foreground">{artwork.artist}</span>
                 </p>
 
                 {artwork.description && (
-                  <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
                     {artwork.description}
                   </p>
                 )}
 
-                <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2" style={{ color: 'var(--text-primary)' }}>
-                  <div className="rounded-xl border p-3" style={{ borderColor: 'rgba(212,197,185,0.75)', background: 'rgba(255,255,255,0.45)' }}>
-                    <span className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                      Style
-                    </span>
-                    <div className="mt-1 font-semibold">{artwork.style || '—'}</div>
-                  </div>
-
-                  <div className="rounded-xl border p-3" style={{ borderColor: 'rgba(212,197,185,0.75)', background: 'rgba(255,255,255,0.45)' }}>
-                    <span className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                      Medium
-                    </span>
-                    <div className="mt-1 font-semibold">{artwork.medium || '—'}</div>
-                  </div>
-
+                <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                  <MiniStat label="Style" value={artwork.style || '—'} />
+                  <MiniStat label="Medium" value={artwork.medium || '—'} />
                   {artwork.dimensions && (
-                    <div className="rounded-xl border p-3 sm:col-span-2" style={{ borderColor: 'rgba(212,197,185,0.75)', background: 'rgba(255,255,255,0.45)' }}>
-                      <span className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                        Size
-                      </span>
-                      <div className="mt-1 font-semibold">
-                        {artwork.dimensions.width} × {artwork.dimensions.height} cm
-                      </div>
-                    </div>
+                    <MiniStat
+                      label="Size"
+                      value={`${artwork.dimensions.width} × ${artwork.dimensions.height} cm`}
+                      full
+                    />
                   )}
                 </div>
               </div>
             )}
 
             {/* Bid history */}
-            <div
-              className="rounded-2xl border p-6"
-              style={{
-                borderColor: 'var(--border)',
-                background: 'rgba(245, 239, 230, 0.65)',
-                boxShadow: 'var(--shadow-card)',
-              }}
-            >
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
               <div className="flex items-end justify-between gap-4">
-                <h3 className="font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
-                  Bid history
-                </h3>
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <h3 className="font-display text-xl font-black">Bid history</h3>
+                <span className="text-xs text-muted-foreground">
                   {bids.length} bid{bids.length === 1 ? '' : 's'}
                 </span>
               </div>
 
               {bids.length === 0 ? (
-                <p className="py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                <p className="py-10 text-center text-sm text-muted-foreground">
                   No bids yet. Be the first to bid.
                 </p>
               ) : (
@@ -411,22 +358,22 @@ export default function AuctionDetailPage() {
                     return (
                       <div
                         key={bid.id}
-                        className="rounded-xl border p-4"
+                        className="rounded-2xl border p-4"
                         style={{
-                          borderColor: isTop ? 'rgba(140, 90, 60, 0.35)' : 'rgba(212,197,185,0.75)',
-                          background: isTop ? 'rgba(140, 90, 60, 0.08)' : 'rgba(255,255,255,0.45)',
+                          borderColor: isTop ? 'rgba(160,106,75,0.45)' : 'rgba(255,255,255,0.10)',
+                          background: isTop ? 'rgba(160,106,75,0.10)' : 'rgba(255,255,255,0.04)',
                         }}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            <div className="font-semibold text-foreground">
                               {formatPrice(bid.amount)}
                               {isTop && (
                                 <span
                                   className="ml-2 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
                                   style={{
-                                    borderColor: 'rgba(140, 90, 60, 0.35)',
-                                    background: 'rgba(140, 90, 60, 0.10)',
+                                    borderColor: 'rgba(160,106,75,0.45)',
+                                    background: 'rgba(160,106,75,0.12)',
                                     color: 'var(--text-primary)',
                                   }}
                                 >
@@ -434,14 +381,10 @@ export default function AuctionDetailPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                              {bid.userEmail}
-                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">{bid.userEmail}</div>
                           </div>
 
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {formatTime(bid.timestamp)}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{formatTime(bid.timestamp)}</div>
                         </div>
                       </div>
                     );
@@ -453,27 +396,18 @@ export default function AuctionDetailPage() {
 
           {/* Right */}
           <div className="lg:col-span-1">
-            <div
-              className="sticky top-6 rounded-2xl border p-6"
-              style={{
-                borderColor: 'var(--border)',
-                background: 'rgba(245, 239, 230, 0.70)',
-                boxShadow: 'var(--shadow-card)',
-              }}
-            >
+            <div className="sticky top-6 rounded-2xl border border-border bg-card p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 {statusBadge}
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs text-muted-foreground">
                   {auction?.bidCount || 0} bid{(auction?.bidCount || 0) === 1 ? '' : 's'}
                 </span>
               </div>
 
               {/* Current bid */}
               <div className="mt-5">
-                <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                  Current bid
-                </div>
-                <div className="mt-1 font-display text-3xl font-black" style={{ color: 'var(--text-primary)' }}>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">Current bid</div>
+                <div className="mt-1 font-display text-3xl font-black text-foreground">
                   {formatPrice(auction?.currentBid)}
                 </div>
               </div>
@@ -483,33 +417,24 @@ export default function AuctionDetailPage() {
                 <div
                   className="mt-5 rounded-2xl border p-4"
                   style={{
-                    borderColor: 'rgba(190, 58, 38, 0.25)',
-                    background: 'rgba(190, 58, 38, 0.08)',
+                    borderColor: 'rgba(255,120,120,0.30)',
+                    background: 'rgba(190,58,38,0.14)',
                   }}
                 >
-                  <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">
                     Time remaining
                   </div>
-                  <div className="mt-1 font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                  <div className="mt-1 font-display text-2xl font-black text-[rgba(255,225,225,0.95)]">
                     {timeRemaining}
                   </div>
                 </div>
               )}
 
               {/* Times / increment */}
-              <div className="mt-5 space-y-2 text-sm" style={{ color: 'var(--text-primary)' }}>
-                <div className="flex items-start justify-between gap-4">
-                  <span style={{ color: 'var(--text-muted)' }}>Starts</span>
-                  <span className="text-right font-semibold">{new Date(auction.startTime).toLocaleString('en-ZA')}</span>
-                </div>
-                <div className="flex items-start justify-between gap-4">
-                  <span style={{ color: 'var(--text-muted)' }}>Ends</span>
-                  <span className="text-right font-semibold">{new Date(auction.endTime).toLocaleString('en-ZA')}</span>
-                </div>
-                <div className="flex items-start justify-between gap-4">
-                  <span style={{ color: 'var(--text-muted)' }}>Min increment</span>
-                  <span className="text-right font-semibold">{formatPrice(auction.minimumIncrement)}</span>
-                </div>
+              <div className="mt-5 space-y-2 text-sm">
+                <Row label="Starts" value={new Date(auction.startTime).toLocaleString('en-ZA')} />
+                <Row label="Ends" value={new Date(auction.endTime).toLocaleString('en-ZA')} />
+                <Row label="Min increment" value={formatPrice(auction.minimumIncrement)} />
               </div>
 
               {/* Bid panel */}
@@ -517,14 +442,7 @@ export default function AuctionDetailPage() {
                 {auction?.status === 'live' && (
                   <>
                     {error && (
-                      <div
-                        className="mb-4 rounded-xl border px-3 py-2 text-sm"
-                        style={{
-                          borderColor: 'rgba(190, 58, 38, 0.25)',
-                          background: 'rgba(190, 58, 38, 0.08)',
-                          color: 'var(--text-primary)',
-                        }}
-                      >
+                      <div className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] px-3 py-2 text-sm text-[rgba(255,225,225,0.95)]">
                         {error}
                       </div>
                     )}
@@ -532,9 +450,7 @@ export default function AuctionDetailPage() {
                     {user ? (
                       <form onSubmit={handlePlaceBid} className="space-y-3">
                         <div>
-                          <label className="block text-xs font-semibold uppercase tracking-widest"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
+                          <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                             Your bid (ZAR)
                           </label>
                           <input
@@ -544,20 +460,16 @@ export default function AuctionDetailPage() {
                             min={minBid}
                             step={auction.minimumIncrement}
                             placeholder={`Min: ${formatPrice(minBid)}`}
-                            className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none"
-                            style={{
-                              borderColor: 'var(--border)',
-                              background: '#fff',
-                              color: 'var(--text-primary)',
-                            }}
+                            className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none
+                                       bg-transparent text-foreground placeholder:text-muted-foreground/70"
                           />
                         </div>
 
                         <button
                           type="submit"
                           disabled={bidding}
-                          className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-60"
-                          style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                          className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110
+                                     disabled:opacity-60 bg-primary text-primary-foreground"
                         >
                           {bidding ? 'Placing bid…' : 'Place bid'}
                         </button>
@@ -565,8 +477,8 @@ export default function AuctionDetailPage() {
                     ) : (
                       <Link
                         href={`/login?redirect=/auctions/${auctionId}`}
-                        className="block w-full rounded-full px-6 py-3 text-center text-sm font-semibold transition-all hover:brightness-110"
-                        style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                        className="block w-full rounded-full px-6 py-3 text-center text-sm font-semibold transition-all hover:brightness-110
+                                   bg-primary text-primary-foreground"
                       >
                         Log in to bid
                       </Link>
@@ -578,14 +490,12 @@ export default function AuctionDetailPage() {
                   <div
                     className="rounded-2xl border p-4 text-center"
                     style={{
-                      borderColor: 'rgba(167, 107, 17, 0.25)',
-                      background: 'rgba(167, 107, 17, 0.10)',
+                      borderColor: 'rgba(255,200,120,0.28)',
+                      background: 'rgba(255,200,120,0.14)',
                     }}
                   >
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      Auction starts
-                    </p>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                    <p className="text-sm font-semibold text-foreground">Auction starts</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {new Date(auction.startTime).toLocaleString('en-ZA')}
                     </p>
                   </div>
@@ -595,15 +505,13 @@ export default function AuctionDetailPage() {
                   <div
                     className="rounded-2xl border p-4 text-center"
                     style={{
-                      borderColor: 'rgba(111, 102, 94, 0.30)',
-                      background: 'rgba(111, 102, 94, 0.08)',
+                      borderColor: 'rgba(255,255,255,0.12)',
+                      background: 'rgba(255,255,255,0.06)',
                     }}
                   >
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      Auction ended
-                    </p>
+                    <p className="text-sm font-semibold text-foreground">Auction ended</p>
                     {auction.winnerId && (
-                      <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      <p className="mt-1 text-sm text-muted-foreground">
                         Winning bid: {formatPrice(auction.currentBid)}
                       </p>
                     )}
@@ -613,8 +521,7 @@ export default function AuctionDetailPage() {
 
               <Link
                 href="/auctions"
-                className="mt-6 block text-center text-sm font-semibold transition-colors hover:opacity-80"
-                style={{ color: 'var(--text-muted)' }}
+                className="mt-6 block text-center text-sm font-semibold transition-colors hover:opacity-80 text-muted-foreground"
               >
                 Back to auctions list
               </Link>
@@ -622,6 +529,33 @@ export default function AuctionDetailPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value, full }) {
+  return (
+    <div
+      className={[
+        'rounded-2xl border p-3',
+        full ? 'sm:col-span-2' : '',
+      ].join(' ')}
+      style={{
+        borderColor: 'rgba(255,255,255,0.10)',
+        background: 'rgba(255,255,255,0.04)',
+      }}
+    >
+      <span className="text-xs uppercase tracking-widest text-muted-foreground">{label}</span>
+      <div className="mt-1 font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-semibold text-foreground">{value}</span>
     </div>
   );
 }

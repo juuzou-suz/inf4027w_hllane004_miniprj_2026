@@ -46,36 +46,20 @@ export default function LoginPage() {
       else if (code === 'auth/invalid-email') setError('Invalid email address format.');
       else if (code === 'auth/too-many-requests') setError('Too many failed login attempts. Please try again later.');
       else setError('Login failed. Please try again.');
+
       setLoading(false);
     }
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ background:  'rgb(255, 255, 255)' }}
-    >
+    <div className="min-h-screen flex items-center justify-center px-4 bg-background text-foreground">
       <div className="w-full max-w-md">
         {/* Card */}
-        <div
-          className="rounded-2xl border p-8"
-          style={{
-            background: 'rgba(255,255,255,0.55)',
-            borderColor: 'var(--border)',
-            boxShadow: 'var(--shadow-card)',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-lg">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1
-              className="font-display text-3xl font-black"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Welcome back
-            </h1>
-
-            <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <h1 className="font-display text-3xl font-black">Welcome back</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
               Log in to continue collecting and bidding.
             </p>
           </div>
@@ -83,12 +67,10 @@ export default function LoginPage() {
           {/* Error */}
           {error && (
             <div
-              className="mb-6 rounded-xl border px-4 py-3 text-sm"
-              style={{
-                background: 'rgba(190, 58, 38, 0.08)',
-                borderColor: 'rgba(190, 58, 38, 0.22)',
-                color: '#8b2d1f',
-              }}
+              className="mb-6 rounded-xl border px-4 py-3 text-sm
+                         border-[rgba(255,120,120,0.35)]
+                         bg-[rgba(190,58,38,0.18)]
+                         text-[rgba(255,225,225,0.95)]"
             >
               {error}
             </div>
@@ -99,8 +81,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold uppercase tracking-widest"
-                style={{ color: 'var(--text-muted)' }}
+                className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground"
               >
                 Email
               </label>
@@ -113,20 +94,19 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 placeholder="you@example.com"
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none"
-                style={{
-                  background: '#ffffff',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
+                className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none
+                           bg-[rgba(255,255,255,0.04)]
+                           placeholder:text-muted-foreground/70
+                           focus:ring-2 focus:ring-[rgba(160,106,75,0.35)]
+                           focus:border-[rgba(160,106,75,0.9)]
+                           disabled:opacity-70"
               />
             </div>
 
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs font-semibold uppercase tracking-widest"
-                style={{ color: 'var(--text-muted)' }}
+                className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground"
               >
                 Password
               </label>
@@ -139,35 +119,32 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 placeholder="Enter your password"
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none"
-                style={{
-                  background: '#ffffff',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
+                className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none
+                           bg-[rgba(255,255,255,0.04)]
+                           placeholder:text-muted-foreground/70
+                           focus:ring-2 focus:ring-[rgba(160,106,75,0.35)]
+                           focus:border-[rgba(160,106,75,0.9)]
+                           disabled:opacity-70"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed hover:brightness-110"
-              style={{
-                background: 'var(--clay)',
-                color: '#F5EFE6',
-              }}
+              className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all
+                         bg-primary text-primary-foreground
+                         hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? 'Logging in…' : 'Log in'}
             </button>
           </form>
 
           {/* Footer */}
-          <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link
               href={`/register${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
-              className="font-semibold transition-colors hover:opacity-80"
-              style={{ color: 'var(--clay)' }}
+              className="font-semibold text-primary hover:opacity-80"
             >
               Register here
             </Link>

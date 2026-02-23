@@ -10,30 +10,10 @@ import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
 const PAYMENT_METHODS = [
-  {
-    id: 'credit_card',
-    label: 'Credit / Debit Card',
-    icon: '💳',
-    description: 'Visa, Mastercard, Amex',
-  },
-  {
-    id: 'paypal',
-    label: 'PayPal',
-    icon: '🅿️',
-    description: 'Pay with your PayPal account',
-  },
-  {
-    id: 'eft',
-    label: 'EFT / Bank Transfer',
-    icon: '🏦',
-    description: 'Direct bank transfer',
-  },
-  {
-    id: 'cash_on_delivery',
-    label: 'Cash on Delivery',
-    icon: '💵',
-    description: 'Pay when you receive',
-  },
+  { id: 'credit_card', label: 'Credit / Debit Card', icon: '💳', description: 'Visa, Mastercard, Amex' },
+  { id: 'paypal', label: 'PayPal', icon: '🅿️', description: 'Pay with your PayPal account' },
+  { id: 'eft', label: 'EFT / Bank Transfer', icon: '🏦', description: 'Direct bank transfer' },
+  { id: 'cash_on_delivery', label: 'Cash on Delivery', icon: '💵', description: 'Pay when you receive' },
 ];
 
 export default function CheckoutPage() {
@@ -45,18 +25,12 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
 
-  // Redirect if not logged in
   useEffect(() => {
-    if (!user) {
-      router.push('/login?redirect=/checkout');
-    }
+    if (!user) router.push('/login?redirect=/checkout');
   }, [user, router]);
 
-  // Redirect if cart is empty
   useEffect(() => {
-    if (cart.length === 0 && !placing) {
-      router.push('/artworks');
-    }
+    if (cart.length === 0 && !placing) router.push('/artworks');
   }, [cart, placing, router]);
 
   const formatPrice = (price) =>
@@ -76,7 +50,6 @@ export default function CheckoutPage() {
     setPlacing(true);
 
     try {
-      // Build order items from cart
       const items = cart.map((item) => ({
         artworkId: item.id,
         title: item.title,
@@ -85,7 +58,6 @@ export default function CheckoutPage() {
         price: item.price,
       }));
 
-      // Create order in Firestore
       const orderId = await createOrder({
         userId: user.uid,
         userEmail: user.email,
@@ -96,17 +68,9 @@ export default function CheckoutPage() {
         itemCount: cart.length,
       });
 
-      // Mark each artwork as sold
-      await Promise.all(
-        cart.map((item) =>
-          updateDoc(doc(db, 'artworks', item.id), { status: 'sold' })
-        )
-      );
+      await Promise.all(cart.map((item) => updateDoc(doc(db, 'artworks', item.id), { status: 'sold' })));
 
-      // Clear cart
       clearCart();
-
-      // Redirect to confirmation
       router.push(`/order-confirmation?orderId=${orderId}`);
     } catch (err) {
       console.error('Error placing order:', err);
@@ -117,36 +81,39 @@ export default function CheckoutPage() {
 
   if (!user) return null;
 
+  const selectedMethod = PAYMENT_METHODS.find((m) => m.id === selectedPayment);
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background py-12 text-foreground">
+      <div className="container max-w-5xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Checkout</h1>
-          <p className="text-gray-600">Complete your purchase</p>
+          <h1 className="font-display text-4xl font-black mb-2">Checkout</h1>
+          <p className="text-muted-foreground">Complete your purchase</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Payment Methods */}
+          {/* Left */}
           <div className="lg:col-span-2 space-y-6">
             {/* Order Items */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Your Items ({cart.length})
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-4">
+                Your Items <span className="text-muted-foreground font-medium">({cart.length})</span>
               </h2>
+
               <div className="space-y-4">
                 {cart.map((item) => (
                   <div key={item.id} className="flex items-center gap-4">
                     <img
                       src={item.imageUrl || 'https://via.placeholder.com/80x80'}
                       alt={item.title}
-                      className="w-16 h-16 object-cover rounded-lg"
+                      className="w-16 h-16 object-cover rounded-xl border border-border"
                     />
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{item.title}</p>
-                      <p className="text-sm text-gray-600">by {item.artist}</p>
+                      <p className="font-semibold text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">by {item.artist}</p>
                     </div>
-                    <p className="font-bold text-purple-600">
+                    <p className="font-display font-black text-primary">
                       {formatPrice(item.price)}
                     </p>
                   </div>
@@ -154,112 +121,112 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Payment Method */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">
-                Select Payment Method
-              </h2>
+            {/* Payment Methods */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-6">Select Payment Method</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {PAYMENT_METHODS.map((method) => (
-                  <button
-                    key={method.id}
-                    onClick={() => setSelectedPayment(method.id)}
-                    className={`p-4 rounded-xl border-2 text-left transition ${
-                      selectedPayment === method.id
-                        ? 'border-purple-600 bg-purple-50'
-                        : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">{method.icon}</div>
-                    <div className="font-semibold text-gray-900">
-                      {method.label}
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      {method.description}
-                    </div>
-                    {selectedPayment === method.id && (
-                      <div className="mt-2 text-purple-600 text-sm font-medium">
-                        ✓ Selected
-                      </div>
-                    )}
-                  </button>
-                ))}
+                {PAYMENT_METHODS.map((method) => {
+                  const active = selectedPayment === method.id;
+
+                  return (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedPayment(method.id)}
+                      type="button"
+                      className={[
+                        'p-4 rounded-2xl border text-left transition',
+                        'hover:bg-[rgba(255,255,255,0.04)]',
+                        active
+                          ? 'border-[rgba(160,106,75,0.85)] bg-[rgba(160,106,75,0.12)]'
+                          : 'border-border bg-transparent',
+                      ].join(' ')}
+                    >
+                      <div className="text-3xl mb-2">{method.icon}</div>
+                      <div className="font-semibold text-foreground">{method.label}</div>
+                      <div className="text-sm text-muted-foreground mt-1">{method.description}</div>
+                      {active && (
+                        <div className="mt-2 text-primary text-sm font-semibold">
+                          ✓ Selected
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Simulation Notice */}
-              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-700">
+              <div className="mt-4 rounded-xl border border-[rgba(140,180,255,0.35)] bg-[rgba(140,180,255,0.10)] p-3">
+                <p className="text-sm text-[rgba(210,230,255,0.95)]">
                   💡 Payment is simulated — no real transaction will occur. Simply select a method and place your order.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Right: Order Summary */}
+          {/* Right */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-6 sticky top-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">
-                Order Summary
-              </h2>
+            <div className="rounded-2xl border border-border bg-card p-6 sticky top-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-6">Order Summary</h2>
 
               <div className="space-y-3 mb-6">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600 truncate flex-1 mr-2">
-                      {item.title}
-                    </span>
-                    <span className="font-medium text-gray-900 flex-shrink-0">
+                  <div key={item.id} className="flex justify-between text-sm gap-3">
+                    <span className="text-muted-foreground truncate flex-1">{item.title}</span>
+                    <span className="font-medium text-foreground flex-shrink-0">
                       {formatPrice(item.price)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-gray-200 pt-4 mb-6">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">{formatPrice(getCartTotal())}</span>
+              <div className="border-t border-border pt-4 mb-6">
+                <div className="flex justify-between mb-2 text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-medium text-foreground">{formatPrice(getCartTotal())}</span>
                 </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-600">Delivery</span>
-                  <span className="font-medium text-green-600">Free</span>
+
+                <div className="flex justify-between mb-2 text-sm">
+                  <span className="text-muted-foreground">Delivery</span>
+                  <span className="font-medium text-[rgba(190,255,210,0.95)]">Free</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold mt-3 pt-3 border-t border-gray-200">
+
+                <div className="flex justify-between text-lg font-bold mt-3 pt-3 border-t border-border">
                   <span>Total</span>
-                  <span className="text-purple-600">{formatPrice(getCartTotal())}</span>
+                  <span className="text-primary">{formatPrice(getCartTotal())}</span>
                 </div>
               </div>
 
               {/* Selected Payment Badge */}
-              {selectedPayment && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-purple-700 font-medium">
-                    {PAYMENT_METHODS.find((m) => m.id === selectedPayment)?.icon}{' '}
-                    {PAYMENT_METHODS.find((m) => m.id === selectedPayment)?.label}
+              {selectedMethod && (
+                <div className="rounded-xl border border-[rgba(160,106,75,0.45)] bg-[rgba(160,106,75,0.10)] p-3 mb-4">
+                  <p className="text-sm text-foreground font-semibold">
+                    {selectedMethod.icon} {selectedMethod.label}
                   </p>
                 </div>
               )}
 
               {/* Error */}
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg mb-4 text-sm">
+                <div className="rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.18)] px-3 py-2 mb-4 text-sm text-[rgba(255,225,225,0.95)]">
                   {error}
                 </div>
               )}
 
-              {/* Place Order Button */}
+              {/* Place Order */}
               <button
                 onClick={handlePlaceOrder}
                 disabled={placing || !selectedPayment}
-                className="w-full bg-purple-600 text-white py-4 rounded-lg hover:bg-purple-700 transition font-semibold text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full rounded-full py-4 font-semibold text-base transition
+                           bg-primary text-primary-foreground hover:brightness-110
+                           disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {placing ? 'Placing Order...' : 'Place Order'}
               </button>
 
               <Link
                 href="/cart"
-                className="block text-center text-purple-600 hover:text-purple-800 font-medium mt-4 transition"
+                className="block text-center font-medium mt-4 transition text-primary hover:opacity-80"
               >
                 ← Back to Cart
               </Link>

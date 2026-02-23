@@ -1,17 +1,17 @@
-// Firestore helper functions for database operations
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
   orderBy,
   limit,
-  serverTimestamp 
+  serverTimestamp,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -38,7 +38,7 @@ export async function getUserById(userId) {
 }
 
 /**
- * Update user profile
+ * Update user profile (simple update)
  * @param {string} userId - User ID
  * @param {Object} data - Data to update
  * @returns {Promise<void>}
@@ -48,6 +48,48 @@ export async function updateUser(userId, data) {
     await updateDoc(doc(db, 'users', userId), data);
   } catch (error) {
     console.error('Error updating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create/merge user document (recommended for registration + fallback)
+ * Ensures required fields exist without wiping existing fields.
+ * @param {string} userId
+ * @param {Object} data
+ * @returns {Promise<void>}
+ */
+export async function upsertUser(userId, data) {
+  try {
+    await setDoc(
+      doc(db, 'users', userId),
+      {
+        ...data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error upserting user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update user profile fields (name, address, wishlist, etc.)
+ * Merges fields and sets updatedAt server-side.
+ * @param {string} userId
+ * @param {Object} data
+ * @returns {Promise<void>}
+ */
+export async function updateUserProfile(userId, data) {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
     throw error;
   }
 }
@@ -64,9 +106,9 @@ export async function getAllArtworks() {
   try {
     const artworksCol = collection(db, 'artworks');
     const artworksSnapshot = await getDocs(artworksCol);
-    return artworksSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return artworksSnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting artworks:', error);
@@ -102,7 +144,7 @@ export async function createArtwork(artworkData) {
     const docRef = await addDoc(collection(db, 'artworks'), {
       ...artworkData,
       createdAt: serverTimestamp(),
-      status: 'available'
+      status: 'available',
     });
     return docRef.id;
   } catch (error) {
@@ -147,14 +189,11 @@ export async function deleteArtwork(artworkId) {
  */
 export async function getArtworksByStatus(status) {
   try {
-    const q = query(
-      collection(db, 'artworks'),
-      where('status', '==', status)
-    );
+    const q = query(collection(db, 'artworks'), where('status', '==', status));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return querySnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting artworks by status:', error);
@@ -169,14 +208,11 @@ export async function getArtworksByStatus(status) {
  */
 export async function getArtworksByStyle(style) {
   try {
-    const q = query(
-      collection(db, 'artworks'),
-      where('style', '==', style)
-    );
+    const q = query(collection(db, 'artworks'), where('style', '==', style));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return querySnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting artworks by style:', error);
@@ -185,7 +221,7 @@ export async function getArtworksByStyle(style) {
 }
 
 // ============================================
-// AUCTIONS 
+// AUCTIONS
 // ============================================
 
 /**
@@ -196,9 +232,9 @@ export async function getAllAuctions() {
   try {
     const auctionsCol = collection(db, 'auctions');
     const auctionsSnapshot = await getDocs(auctionsCol);
-    return auctionsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return auctionsSnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting auctions:', error);
@@ -219,9 +255,9 @@ export async function getAuctionsByStatus(status) {
       orderBy('startTime', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return querySnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting auctions by status:', error);
@@ -230,7 +266,7 @@ export async function getAuctionsByStatus(status) {
 }
 
 // ============================================
-// BIDS 
+// BIDS
 // ============================================
 
 /**
@@ -246,9 +282,9 @@ export async function getBidsByAuction(auctionId) {
       orderBy('timestamp', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return querySnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting bids:', error);
@@ -269,9 +305,9 @@ export async function getUserBids(userId) {
       orderBy('timestamp', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return querySnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting user bids:', error);
@@ -289,8 +325,8 @@ export async function placeBid(bidData) {
     const docRef = await addDoc(collection(db, 'bids'), {
       ...bidData,
       timestamp: serverTimestamp(),
-      isWinning: true, 
-      isOutbid: false
+      isWinning: true,
+      isOutbid: false,
     });
     return docRef.id;
   } catch (error) {
@@ -328,9 +364,9 @@ export async function getAllOrders() {
     const ordersSnapshot = await getDocs(
       query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
     );
-    return ordersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return ordersSnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting orders:', error);
@@ -349,9 +385,9 @@ export async function getOrdersByUser(userId) {
       orderBy('createdAt', 'desc')
     );
     const ordersSnapshot = await getDocs(q);
-    return ordersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    return ordersSnapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
   } catch (error) {
     console.error('Error getting user orders:', error);

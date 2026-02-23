@@ -28,26 +28,46 @@ export default function AuctionsPage() {
   };
 
   const badge = (status) => {
+    // Dark-safe badges: light-ish text, tinted backgrounds, subtle borders
     const map = {
-      live: { label: 'Live', bg: 'rgba(190, 58, 38, 0.14)', fg: '#8b2d1f', bd: 'rgba(190, 58, 38, 0.22)' },
-      upcoming: { label: 'Upcoming', bg: 'rgba(167, 107, 17, 0.18)', fg: '#7b4f0e', bd: 'rgba(167, 107, 17, 0.24)' },
-      ended: { label: 'Ended', bg: 'rgba(111, 102, 94, 0.16)', fg: 'rgba(46, 42, 39, 0.80)', bd: 'rgba(111, 102, 94, 0.22)' },
-      completed: { label: 'Completed', bg: 'rgba(24, 74, 52, 0.12)', fg: 'rgba(24, 74, 52, 0.9)', bd: 'rgba(24, 74, 52, 0.20)' },
+      live: {
+        label: 'Live',
+        bg: 'rgba(190, 58, 38, 0.20)',
+        fg: 'rgba(255, 225, 225, 0.95)',
+        bd: 'rgba(255, 120, 120, 0.30)',
+        icon: '🔴',
+      },
+      upcoming: {
+        label: 'Upcoming',
+        bg: 'rgba(255, 200, 120, 0.14)',
+        fg: 'rgba(255, 235, 205, 0.95)',
+        bd: 'rgba(255, 200, 120, 0.28)',
+        icon: '📅',
+      },
+      ended: {
+        label: 'Ended',
+        bg: 'rgba(255, 255, 255, 0.06)',
+        fg: 'rgba(245, 239, 230, 0.90)',
+        bd: 'rgba(255, 255, 255, 0.10)',
+        icon: '⏹️',
+      },
+      completed: {
+        label: 'Completed',
+        bg: 'rgba(190, 255, 210, 0.12)',
+        fg: 'rgba(210, 255, 230, 0.95)',
+        bd: 'rgba(190, 255, 210, 0.25)',
+        icon: '✅',
+      },
     };
 
     const v = map[status] || map.ended;
 
     return (
       <span
-        className="rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
-        style={{
-          background: v.bg,
-          color: v.fg,
-          border: `1px solid ${v.bd}`,
-        }}
+        className="rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap border"
+        style={{ background: v.bg, color: v.fg, borderColor: v.bd }}
       >
-        {status === 'live' ? '🔴 ' : status === 'upcoming' ? '📅 ' : status === 'ended' ? '⏹️ ' : '✅ '}
-        {v.label}
+        {v.icon} {v.label}
       </span>
     );
   };
@@ -62,7 +82,7 @@ export default function AuctionsPage() {
       const withStatus = data.map((a) => ({ ...a, status: getAuctionStatus(a) }));
       setAuctions(withStatus);
 
-      // update db in background if needed
+      // update db if needed
       for (const a of withStatus) {
         const original = data.find((x) => x.id === a.id);
         if (original && original.status !== a.status) {
@@ -87,10 +107,8 @@ export default function AuctionsPage() {
   useEffect(() => {
     if (!auctions.length) return;
 
-    const interval = setInterval(async () => {
-      // IMPORTANT: use functional setState so we always read the freshest auctions
+    const interval = setInterval(() => {
       setAuctions((prev) => {
-        // kick off async DB updates without blocking UI
         (async () => {
           await Promise.all(
             prev.map(async (auction) => {
@@ -102,7 +120,6 @@ export default function AuctionsPage() {
           );
         })();
 
-        // update UI immediately
         return prev.map((auction) => ({
           ...auction,
           status: getAuctionStatus(auction),
@@ -131,24 +148,25 @@ export default function AuctionsPage() {
   // ---------- UI ----------
   const Chip = ({ value, label, count }) => {
     const active = filter === value;
+
     return (
       <button
         onClick={() => setFilter(value)}
-        className="rounded-full px-4 py-2 text-sm font-semibold transition-all"
+        className="rounded-full px-4 py-2 text-sm font-semibold transition-all border"
         style={{
-          border: `1px solid ${active ? 'rgba(140, 90, 60, 0.45)' : 'var(--border)'}`,
-          background: active ? 'rgba(140, 90, 60, 0.10)' : 'rgba(255,255,255,0.55)',
+          borderColor: active ? 'rgba(160,106,75,0.55)' : 'rgba(255,255,255,0.10)',
+          background: active ? 'rgba(160,106,75,0.12)' : 'rgba(255,255,255,0.04)',
           color: active ? 'var(--clay)' : 'var(--text-primary)',
         }}
         type="button"
       >
         {label}
         <span
-          className="ml-2 rounded-full px-2 py-0.5 text-xs"
+          className="ml-2 rounded-full px-2 py-0.5 text-xs border"
           style={{
-            background: 'rgba(46, 42, 39, 0.06)',
+            background: 'rgba(255,255,255,0.06)',
             color: 'var(--text-muted)',
-            border: `1px solid var(--border)`,
+            borderColor: 'rgba(255,255,255,0.10)',
           }}
         >
           {count}
@@ -158,14 +176,12 @@ export default function AuctionsPage() {
   };
 
   return (
-    <div className="min-h-screen py-12" style={{ background: '#fff' }}>
+    <div className="min-h-screen py-12 bg-background text-foreground">
       <div className="container">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-black" style={{ color: 'var(--text-primary)' }}>
-            Art Auctions
-          </h1>
-          <p className="mt-2 text-base md:text-lg" style={{ color: 'var(--text-muted)' }}>
+          <h1 className="font-display text-4xl font-black">Art Auctions</h1>
+          <p className="mt-2 text-base md:text-lg text-muted-foreground">
             Participate in live auctions and bid on artworks that move you.
           </p>
         </div>
@@ -181,24 +197,18 @@ export default function AuctionsPage() {
         {/* Loading */}
         {loading && (
           <div className="flex justify-center py-20">
-            <div
-              className="h-12 w-12 animate-spin rounded-full border-2"
-              style={{ borderColor: 'var(--border)', borderTopColor: 'var(--clay)' }}
-            />
+            <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary" />
           </div>
         )}
 
         {/* Error */}
         {!loading && error && (
-          <div
-            className="rounded-xl border p-6"
-            style={{ borderColor: 'rgba(190, 58, 38, 0.25)', background: 'rgba(190, 58, 38, 0.08)' }}
-          >
-            <p style={{ color: '#8b2d1f' }}>{error}</p>
+          <div className="rounded-2xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] p-6">
+            <p className="text-[rgba(255,225,225,0.95)]">{error}</p>
             <button
               onClick={fetchAuctions}
-              className="mt-4 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:brightness-110"
-              style={{ background: '#8b2d1f', color: '#F5EFE6' }}
+              className="mt-4 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:brightness-110
+                         bg-primary text-primary-foreground"
               type="button"
             >
               Try again
@@ -208,15 +218,12 @@ export default function AuctionsPage() {
 
         {/* Empty */}
         {!loading && !error && filteredAuctions.length === 0 && (
-          <div
-            className="rounded-2xl border p-10 text-center"
-            style={{ borderColor: 'var(--border)', background: 'rgba(255,255,255,0.55)' }}
-          >
+          <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-lg">
             <div className="text-5xl mb-4">⚡</div>
-            <h3 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+            <h3 className="font-display text-2xl font-black">
               No {filter !== 'all' ? filter : ''} auctions yet
             </h3>
-            <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <p className="mt-2 text-sm text-muted-foreground">
               {filter === 'live'
                 ? 'There are no live auctions right now. Check back soon.'
                 : 'Check back later for upcoming auctions.'}
@@ -225,8 +232,8 @@ export default function AuctionsPage() {
             {filter !== 'all' && (
               <button
                 onClick={() => setFilter('all')}
-                className="mt-6 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110"
-                style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                className="mt-6 rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110
+                           bg-primary text-primary-foreground"
                 type="button"
               >
                 View all auctions
@@ -238,7 +245,7 @@ export default function AuctionsPage() {
         {/* Grid */}
         {!loading && !error && filteredAuctions.length > 0 && (
           <>
-            <div className="mb-6 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <div className="mb-6 text-sm text-muted-foreground">
               Showing {filteredAuctions.length}{' '}
               {filter !== 'all' ? filter : ''} {filteredAuctions.length === 1 ? 'auction' : 'auctions'}
             </div>
@@ -246,21 +253,14 @@ export default function AuctionsPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredAuctions.map((auction) => (
                 <Link key={auction.id} href={`/auctions/${auction.id}`} className="group block">
-                  <div
-                    className="overflow-hidden rounded-2xl border transition-shadow duration-300"
-                    style={{
-                      borderColor: 'var(--border)',
-                      background: 'rgba(255,255,255,0.55)',
-                      boxShadow: 'var(--shadow-card)',
-                    }}
-                  >
+                  <div className="overflow-hidden rounded-2xl border border-border bg-card transition-shadow duration-300 hover:shadow-lg">
                     <div className="p-6">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h3 className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          <h3 className="font-display text-lg font-semibold text-foreground">
                             Artwork Auction
                           </h3>
-                          <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          <p className="mt-1 text-xs text-muted-foreground">
                             ID: {auction.id?.substring(0, 8)}...
                           </p>
                         </div>
@@ -268,44 +268,34 @@ export default function AuctionsPage() {
                       </div>
 
                       {/* Bid box */}
-                      <div
-                        className="mt-5 rounded-xl border p-4"
-                        style={{
-                          borderColor: 'var(--border)',
-                          background: 'rgba(232, 216, 195, 0.35)',
-                        }}
-                      >
-                        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                      <div className="mt-5 rounded-2xl border border-border p-4 bg-[rgba(255,255,255,0.04)]">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Current bid
                         </div>
-                        <div className="mt-1 font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
+                        <div className="mt-1 font-display text-2xl font-black text-foreground">
                           {formatPrice(auction.currentBid)}
                         </div>
-                        <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <div className="mt-1 text-xs text-muted-foreground">
                           {auction.bidCount || 0} {auction.bidCount === 1 ? 'bid' : 'bids'}
                         </div>
                       </div>
 
                       {/* Timing */}
-                      <div className="mt-4 space-y-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+                      <div className="mt-4 space-y-1.5 text-sm text-muted-foreground">
                         {auction.status === 'live' && (
                           <div>
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                              Ends:{' '}
-                            </span>
+                            <span className="font-semibold text-foreground">Ends: </span>
                             {formatDateTime(auction.endTime)}
                           </div>
                         )}
                         {auction.status === 'upcoming' && (
                           <div>
-                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                              Starts:{' '}
-                            </span>
+                            <span className="font-semibold text-foreground">Starts: </span>
                             {formatDateTime(auction.startTime)}
                           </div>
                         )}
                         {auction.status === 'ended' && auction.winnerId && (
-                          <div style={{ color: 'rgba(24, 74, 52, 0.95)' }}>
+                          <div className="text-[rgba(210,255,230,0.95)]">
                             <span className="font-semibold">Winner:</span> {auction.winnerId.substring(0, 8)}...
                           </div>
                         )}

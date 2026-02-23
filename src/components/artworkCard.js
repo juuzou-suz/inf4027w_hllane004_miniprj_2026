@@ -4,12 +4,9 @@ import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 
 export default function ArtworkCard({ artwork, auction, onAddToCart }) {
-  const isInAuction =
-    auction && (auction.status === 'live' || auction.status === 'upcoming');
+  const isInAuction = auction && (auction.status === 'live' || auction.status === 'upcoming');
 
-  const href = isInAuction
-    ? `/auctions/${auction.id}`
-    : `/artworks/${artwork.id}`;
+  const href = isInAuction ? `/auctions/${auction.id}` : `/artworks/${artwork.id}`;
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('en-ZA', {
@@ -18,19 +15,11 @@ export default function ArtworkCard({ artwork, auction, onAddToCart }) {
       minimumFractionDigits: 0,
     }).format(price || 0);
 
-  const priceValue = isInAuction
-    ? auction?.currentBid
-    : artwork?.price ?? artwork?.startingBid;
+  const priceValue = isInAuction ? auction?.currentBid : artwork?.price ?? artwork?.startingBid;
 
   return (
     <Link href={href} className="group block h-full">
-      <div
-        className="flex h-full flex-col overflow-hidden rounded-xl transition-shadow duration-300"
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow duration-300 hover:shadow-lg">
         {/* IMAGE (Fixed Ratio) */}
         <div className="relative aspect-[4/5] overflow-hidden">
           <img
@@ -40,26 +29,15 @@ export default function ArtworkCard({ artwork, auction, onAddToCart }) {
           />
 
           {isInAuction && (
-            <span
-              className="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider"
-              style={{
-                background: 'var(--forest)',
-                color: '#F5EFE6',
-              }}
-            >
+            <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider
+                             bg-[rgba(160,106,75,0.95)] text-primary-foreground shadow">
               Live Auction
             </span>
           )}
 
           {artwork.status === 'sold' && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <span
-                className="rounded-full px-4 py-1.5 text-xs font-bold uppercase"
-                style={{
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                }}
-              >
+            <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+              <span className="rounded-full px-4 py-1.5 text-xs font-bold uppercase bg-card text-foreground">
                 Sold
               </span>
             </div>
@@ -68,77 +46,49 @@ export default function ArtworkCard({ artwork, auction, onAddToCart }) {
 
         {/* CONTENT */}
         <div className="flex flex-1 flex-col p-4">
-          {/* Title (clamped to 2 lines) */}
-          <h3
-            className="font-display text-lg font-semibold line-clamp-2"
-            style={{ color: 'var(--text-primary)' }}
-          >
+          <h3 className="font-display text-lg font-semibold line-clamp-2 text-foreground">
             {artwork.title}
           </h3>
 
-          {/* Artist (1 line only) */}
-          <p
-            className="mt-1 text-sm line-clamp-1"
-            style={{ color: 'var(--text-muted)' }}
-          >
+          <p className="mt-1 text-sm line-clamp-1 text-muted-foreground">
             {artwork.artist}
           </p>
 
-          {/* Tags (max 2 shown, fixed height space) */}
+          {/* Tags */}
           <div className="mt-3 min-h-[28px] flex flex-wrap gap-1.5">
             {artwork.style && (
-              <span
-                className="rounded-full px-2.5 py-0.5 text-xs"
-                style={{
-                  background: 'rgba(140, 90, 60, 0.12)',
-                  color: 'var(--clay)',
-                }}
-              >
+              <span className="rounded-full px-2.5 py-0.5 text-xs
+                               bg-[rgba(160,106,75,0.18)] text-primary">
                 {artwork.style}
               </span>
             )}
 
             {artwork.medium && (
-              <span
-                className="rounded-full px-2.5 py-0.5 text-xs"
-                style={{
-                  background: 'rgba(46, 42, 39, 0.08)',
-                  color: 'var(--text-muted)',
-                }}
-              >
+              <span className="rounded-full px-2.5 py-0.5 text-xs
+                               bg-[rgba(255,255,255,0.06)] text-muted-foreground">
                 {artwork.medium}
               </span>
             )}
           </div>
 
-          {/* Spacer pushes price to bottom */}
           <div className="flex-1" />
 
           {/* PRICE + BUTTON */}
           <div className="mt-4 flex items-center justify-between">
             <div>
-              <span
-                className="block text-xs uppercase tracking-wider"
-                style={{ color: 'var(--text-muted)' }}
-              >
+              <span className="block text-xs uppercase tracking-wider text-muted-foreground">
                 {isInAuction ? 'Current bid' : 'Price'}
               </span>
 
-              <span
-                className="font-display text-lg font-bold"
-                style={{ color: 'var(--clay)' }}
-              >
+              <span className="font-display text-lg font-bold text-primary">
                 {formatPrice(priceValue)}
               </span>
             </div>
 
             {artwork.status !== 'sold' && !isInAuction && (
               <button
-                className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:brightness-110"
-                style={{
-                  background: 'var(--clay)',
-                  color: '#F5EFE6',
-                }}
+                className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold
+                           bg-primary text-primary-foreground transition-all hover:brightness-110"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onAddToCart) onAddToCart(artwork);

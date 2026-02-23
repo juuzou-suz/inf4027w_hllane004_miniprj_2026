@@ -9,7 +9,6 @@ export default function NewArtworkPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     artist: '',
@@ -29,141 +28,112 @@ export default function NewArtworkPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Validate required fields
-      if (!formData.title || !formData.artist || !formData.medium || 
-          !formData.style || !formData.price) {
+      if (!formData.title || !formData.artist || !formData.medium || !formData.style || !formData.price) {
         setError('Please fill in all required fields');
         setLoading(false);
         return;
       }
 
-      // Validate image path if provided
-if (formData.imageUrl) {
-  const trimmed = formData.imageUrl.trim();
+      if (formData.imageUrl) {
+        const trimmed = formData.imageUrl.trim();
 
-  if (!trimmed.startsWith('/Images/')) {
-    setError('Image path must start with /Images/');
-    setLoading(false);
-    return;
-  }
+        if (!trimmed.startsWith('/Images/')) {
+          setError('Image path must start with /Images/');
+          setLoading(false);
+          return;
+        }
 
-  if (!/\.(jpg|jpeg|png|webp)$/i.test(trimmed)) {
-    setError('Image must be .jpg, .jpeg, .png or .webp');
-    setLoading(false);
-    return;
-  }
-}
+        if (!/\.(jpg|jpeg|png|webp)$/i.test(trimmed)) {
+          setError('Image must be .jpg, .jpeg, .png or .webp');
+          setLoading(false);
+          return;
+        }
+      }
 
-      // Prepare artwork data
       const artworkData = {
-  title: formData.title.trim(),
-  artist: formData.artist.trim(),
-  description: formData.description.trim(),
-  imageUrl: formData.imageUrl.trim() || '/Images/Placeholder.png',
-  medium: formData.medium.trim(),
-  style: formData.style.trim(),
-  dimensions: {
-    width: parseFloat(formData.width) || 0,
-    height: parseFloat(formData.height) || 0,
-    depth: parseFloat(formData.depth) || 0,
-  },
-  yearCreated: parseInt(formData.yearCreated) || new Date().getFullYear(),
-  price: formData.price ? parseFloat(formData.price) : null, // Add this
-  startingBid: parseFloat(formData.startingBid),
-  currentBid: null,
-  tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-  status: 'available',
-  createdBy: user.uid,
-  viewCount: 0,
-};
-      // Create artwork
-      const artworkId = await createArtwork(artworkData);
-      
-      // Redirect to artworks list
+        title: formData.title.trim(),
+        artist: formData.artist.trim(),
+        description: formData.description.trim(),
+        imageUrl: formData.imageUrl.trim() || '/Images/Placeholder.png',
+        medium: formData.medium.trim(),
+        style: formData.style.trim(),
+        dimensions: {
+          width: parseFloat(formData.width) || 0,
+          height: parseFloat(formData.height) || 0,
+          depth: parseFloat(formData.depth) || 0,
+        },
+        yearCreated: parseInt(formData.yearCreated) || new Date().getFullYear(),
+        price: formData.price ? parseFloat(formData.price) : null,
+        startingBid: parseFloat(formData.startingBid),
+        currentBid: null,
+        tags: formData.tags.split(',').map((tag) => tag.trim()).filter((tag) => tag),
+        status: 'available',
+        createdBy: user.uid,
+        viewCount: 0,
+      };
+
+      await createArtwork(artworkData);
       router.push('/admin/artworks');
-    } catch (error) {
-      console.error('Error creating artwork:', error);
+    } catch (err) {
+      console.error('Error creating artwork:', err);
       setError('Failed to create artwork. Please try again.');
       setLoading(false);
     }
   };
 
   return (
-    <div>
+    <div className="text-foreground">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Add New Artwork
-        </h1>
-        <p className="text-gray-600">
-          Fill in the details below to add a new artwork to the catalog
+        <h1 className="font-display text-3xl font-black mb-2">Add artwork</h1>
+        <p className="text-muted-foreground">
+          Create a new listing for the catalog.
         </p>
       </div>
 
-      {/* Error Message */}
+      {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        <div className="mb-6 rounded-2xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] px-4 py-3 text-sm text-[rgba(255,225,225,0.95)]">
           {error}
         </div>
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-card p-8 shadow-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Title */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+          <Field className="md:col-span-2" label="Title" required>
+            <Input
               name="title"
               value={formData.title}
               onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="e.g., Sunset Dreams"
+              required
             />
-          </div>
+          </Field>
 
-          {/* Artist */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Artist Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+          <Field label="Artist name" required>
+            <Input
               name="artist"
               value={formData.artist}
               onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="e.g., Maria Santos"
+              required
             />
-          </div>
+          </Field>
 
-          {/* Year Created */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Year Created
-            </label>
-            <input
+          <Field label="Year created">
+            <Input
               type="number"
               name="yearCreated"
               value={formData.yearCreated}
@@ -171,40 +141,23 @@ if (formData.imageUrl) {
               min="1900"
               max={new Date().getFullYear()}
               autoComplete="off"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
-          </div>
+          </Field>
 
-          {/* Image URL */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Image URL
-            </label>
-            <input
-              type="text"
+          <Field className="md:col-span-2" label="Image path">
+            <Input
               name="imageUrl"
               value={formData.imageUrl}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="/Images/ArtworkName.jpg"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Example: /Images/ArtworkName.jpg  or use /Images/ArtworkName.png
+            <p className="mt-1 text-xs text-muted-foreground">
+              Use a local path like /Images/ArtworkName.jpg, .png, or .webp
             </p>
-          </div>
+          </Field>
 
-          {/* Medium */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Medium <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="medium"
-              value={formData.medium}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
+          <Field label="Medium" required>
+            <Select name="medium" value={formData.medium} onChange={handleChange} required>
               <option value="">Select medium</option>
               <option value="Oil on canvas">Oil on canvas</option>
               <option value="Acrylic on canvas">Acrylic on canvas</option>
@@ -216,21 +169,11 @@ if (formData.imageUrl) {
               <option value="Charcoal">Charcoal</option>
               <option value="Pastel">Pastel</option>
               <option value="Other">Other</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          {/* Style */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Style <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="style"
-              value={formData.style}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            >
+          <Field label="Style" required>
+            <Select name="style" value={formData.style} onChange={handleChange} required>
               <option value="">Select style</option>
               <option value="Abstract">Abstract</option>
               <option value="Realism">Realism</option>
@@ -243,15 +186,11 @@ if (formData.imageUrl) {
               <option value="Landscape">Landscape</option>
               <option value="Portrait">Portrait</option>
               <option value="Other">Other</option>
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          {/* Dimensions */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Width (cm)
-            </label>
-            <input
+          <Field label="Width (cm)">
+            <Input
               type="number"
               name="width"
               value={formData.width}
@@ -259,16 +198,12 @@ if (formData.imageUrl) {
               min="0"
               step="0.1"
               autoComplete="off"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="100"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Height (cm)
-            </label>
-            <input
+          <Field label="Height (cm)">
+            <Input
               type="number"
               name="height"
               value={formData.height}
@@ -276,16 +211,12 @@ if (formData.imageUrl) {
               min="0"
               step="0.1"
               autoComplete="off"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="80"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Depth (cm)
-            </label>
-            <input
+          <Field label="Depth (cm)">
+            <Input
               type="number"
               name="depth"
               value={formData.depth}
@@ -293,104 +224,138 @@ if (formData.imageUrl) {
               min="0"
               step="0.1"
               autoComplete="off"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="2"
             />
-          </div>
-          {/* Regular Price */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Price (ZAR) - For Direct Purchase
-  </label>
-  <input
-    type="number"
-    name="price"
-    value={formData.price}
-    onChange={handleChange}
-    min="10"
-    step="10"
-    autoComplete="off"
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-    placeholder="e.g., 500"
-  />
-  <p className="text-sm text-gray-500 mt-1">
-    Regular price for customers to purchase directly (not via auction)
-  </p>
-</div>
+          </Field>
 
-{/* Starting Bid */}
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Starting Bid (ZAR) - For Auctions
-  </label>
-  <input
-    type="number"
-    name="startingBid"
-    value={formData.startingBid}
-    onChange={handleChange}
-    min="10"
-    step="10"
-    autoComplete="off"
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-    placeholder="e.g., 400"
-  />
-  <p className="text-sm text-gray-500 mt-1">
-    Minimum bid when this artwork is placed in an auction
-  </p>
-</div>
+          <Field label="Price (ZAR) — direct purchase">
+            <Input
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              min="10"
+              step="10"
+              autoComplete="off"
+              placeholder="e.g., 500"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Regular price for customers to purchase directly.
+            </p>
+          </Field>
 
-          {/* Description */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
+          <Field label="Starting bid (ZAR) — auctions">
+            <Input
+              type="number"
+              name="startingBid"
+              value={formData.startingBid}
+              onChange={handleChange}
+              min="10"
+              step="10"
+              autoComplete="off"
+              placeholder="e.g., 400"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Minimum bid when this artwork is placed in an auction.
+            </p>
+          </Field>
+
+          <Field className="md:col-span-2" label="Description">
+            <Textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
-              rows="4"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              rows={4}
               placeholder="Describe the artwork, inspiration, techniques used, etc."
             />
-          </div>
+          </Field>
 
-          {/* Tags */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tags (comma-separated)
-            </label>
-            <input
-              type="text"
+          <Field className="md:col-span-2" label="Tags (comma-separated)">
+            <Input
               name="tags"
               value={formData.tags}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="abstract, colorful, modern, nature"
+              placeholder="abstract, colourful, modern"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Separate tags with commas (e.g., abstract, colorful, modern)
+            <p className="mt-1 text-xs text-muted-foreground">
+              Separate tags with commas.
             </p>
-          </div>
+          </Field>
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row gap-3 mt-8">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition font-medium"
+            className="flex-1 rounded-full px-6 py-3 text-sm font-semibold border transition hover:opacity-90"
+            style={{
+              borderColor: 'rgba(255,255,255,0.10)',
+              background: 'rgba(255,255,255,0.04)',
+              color: 'var(--text-primary)',
+            }}
           >
             Cancel
           </button>
+
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="flex-1 rounded-full px-6 py-3 text-sm font-semibold transition hover:brightness-110
+                       bg-primary text-primary-foreground disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating...' : 'Create Artwork'}
+            {loading ? 'Creating…' : 'Create artwork'}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+/* ---------- Small UI helpers ---------- */
+
+function Field({ label, required, className = '', children }) {
+  return (
+    <div className={className}>
+      <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+        {label} {required ? <span style={{ color: 'rgba(255,225,225,0.95)' }}>*</span> : null}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function Input(props) {
+  return (
+    <input
+      {...props}
+      className={[
+        'w-full rounded-xl border px-4 py-3 text-sm outline-none',
+        'bg-transparent text-foreground placeholder:text-muted-foreground/70',
+      ].join(' ')}
+      style={{
+        borderColor: 'rgba(255,255,255,0.10)',
+      }}
+    />
+  );
+}
+
+function Select(props) {
+  return (
+    <select
+      {...props}
+      className="w-full rounded-xl border px-4 py-3 text-sm outline-none bg-transparent text-foreground"
+      style={{ borderColor: 'rgba(255,255,255,0.10)' }}
+    />
+  );
+}
+
+function Textarea(props) {
+  return (
+    <textarea
+      {...props}
+      className="w-full rounded-xl border px-4 py-3 text-sm outline-none bg-transparent text-foreground placeholder:text-muted-foreground/70"
+      style={{ borderColor: 'rgba(255,255,255,0.10)' }}
+    />
   );
 }

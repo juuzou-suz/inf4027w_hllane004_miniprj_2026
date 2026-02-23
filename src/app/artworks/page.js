@@ -26,64 +26,51 @@ function FiltersBar({
   onClearFilters,
 }) {
   return (
-    <section className="border-b py-6" style={{ borderColor: 'var(--border)' }}>
+    <section className="border-b border-border/60 py-6 bg-background/60 backdrop-blur-sm">
       <div className="container">
         <div className="mb-4 flex flex-col gap-1">
-          <h2 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
-            Browse artworks
-          </h2>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Search and filter without the noise.
-          </p>
+          <h2 className="font-display text-2xl font-black text-foreground">Browse artworks</h2>
+          <p className="text-sm text-muted-foreground">Search and filter without the noise.</p>
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          {/* Search */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               onSubmitQuery();
             }}
-            className="flex items-center rounded-full shadow-sm"
-            style={{
-              background: '#fff',
-              border: '1px solid var(--border)',
-              height: 42,
-              width: '100%',
-              maxWidth: 420,
-            }}
+            className="flex items-center rounded-full shadow-sm w-full max-w-[420px] h-[42px]
+                       border border-border bg-card"
           >
             <div className="flex flex-1 items-center px-4">
-              <Search size={16} style={{ color: 'var(--text-muted)' }} />
+              <Search size={16} className="text-muted-foreground" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search artworks..."
-                className="ml-2 flex-1 bg-transparent text-sm outline-none"
-                style={{ color: 'var(--text-primary)' }}
+                className="ml-2 flex-1 bg-transparent text-sm outline-none text-foreground
+                           placeholder:text-muted-foreground/70"
               />
             </div>
 
             <button
               type="submit"
-              className="mr-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:brightness-110"
-              style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+              className="mr-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:brightness-110
+                         bg-primary text-primary-foreground"
             >
               Search
             </button>
           </form>
 
+          {/* Filters */}
           <div className="flex flex-1 flex-wrap items-center gap-2">
             <select
               value={filterStyle}
               onChange={(e) => onFilterStyle(e.target.value)}
-              className="rounded-md border px-3 text-sm outline-none"
-              style={{
-                borderColor: 'var(--border)',
-                background: '#fff',
-                color: 'var(--text-primary)',
-                height: 42,
-              }}
+              className="h-[42px] rounded-md border border-border px-3 text-sm outline-none
+                         bg-card text-foreground"
             >
               <option value="">All styles</option>
               {styles.map((s) => (
@@ -96,13 +83,8 @@ function FiltersBar({
             <select
               value={filterMedium}
               onChange={(e) => onFilterMedium(e.target.value)}
-              className="rounded-md border px-3 text-sm outline-none"
-              style={{
-                borderColor: 'var(--border)',
-                background: '#fff',
-                color: 'var(--text-primary)',
-                height: 42,
-              }}
+              className="h-[42px] rounded-md border border-border px-3 text-sm outline-none
+                         bg-card text-foreground"
             >
               <option value="">All mediums</option>
               {mediums.map((m) => (
@@ -117,25 +99,28 @@ function FiltersBar({
               value={filterMaxPrice}
               onChange={(e) => onFilterMaxPrice(e.target.value)}
               placeholder="Max ZAR"
-              className="w-28 rounded-md border px-3 text-sm outline-none"
-              style={{
-                borderColor: 'var(--border)',
-                background: '#fff',
-                color: 'var(--text-primary)',
-                height: 42,
-              }}
+              className="h-[42px] w-28 rounded-md border border-border px-3 text-sm outline-none
+                         bg-card text-foreground placeholder:text-muted-foreground/70"
             />
+
+            {/* Optional toggle exists in state; if you later add UI, keep this style */}
+            {/* Example:
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={filterAvailable}
+                onChange={(e) => onFilterAvailable(e.target.checked)}
+              />
+              Available only
+            </label>
+            */}
 
             {hasSearch && (
               <button
                 onClick={onClearSearch}
-                className="flex items-center gap-1 rounded-full border px-3 py-2 text-xs font-medium transition-colors hover:opacity-90"
-                style={{
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-muted)',
-                  background: 'transparent',
-                  height: 42,
-                }}
+                className="h-[42px] flex items-center gap-1 rounded-full border border-border px-3 py-2
+                           text-xs font-medium text-muted-foreground transition-colors hover:text-foreground
+                           hover:bg-[rgba(255,255,255,0.06)]"
                 type="button"
               >
                 <X size={14} />
@@ -145,8 +130,8 @@ function FiltersBar({
 
             <button
               onClick={onClearFilters}
-              className="rounded-full px-3 py-2 text-xs font-semibold transition-colors hover:opacity-80"
-              style={{ color: 'var(--clay)', height: 42 }}
+              className="h-[42px] rounded-full px-3 py-2 text-xs font-semibold
+                         text-primary transition-colors hover:opacity-80"
               type="button"
             >
               Clear filters
@@ -174,6 +159,7 @@ export default function ArtworksPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchData = async () => {
@@ -243,7 +229,7 @@ export default function ArtworksPage() {
   const hasSearch = searchResults !== null;
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+    <div className="min-h-screen bg-background text-foreground">
       <FiltersBar
         styles={styles}
         mediums={mediums}
@@ -272,41 +258,29 @@ export default function ArtworksPage() {
         <div className="container">
           {loading ? (
             <div className="flex justify-center py-16">
-              <div
-                className="h-10 w-10 animate-spin rounded-full border-2"
-                style={{ borderColor: 'var(--border)', borderTopColor: 'var(--clay)' }}
-              />
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-primary" />
             </div>
           ) : error ? (
-            <div
-              className="rounded-xl border p-6"
-              style={{
-                background: 'rgba(140, 90, 60, 0.06)',
-                borderColor: 'var(--clay)',
-                color: 'var(--text-primary)',
-              }}
-            >
+            <div className="rounded-xl border border-[rgba(160,106,75,0.6)] bg-[rgba(160,106,75,0.10)] p-6 text-foreground">
               <p>{error}</p>
               <button
                 onClick={fetchData}
-                className="mt-4 rounded-full px-5 py-2 text-sm font-semibold"
-                style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                className="mt-4 rounded-full px-5 py-2 text-sm font-semibold
+                           bg-primary text-primary-foreground hover:brightness-110"
               >
                 Try Again
               </button>
             </div>
           ) : displayArtworks.length === 0 ? (
             <div className="py-24 text-center">
-              <h3 className="font-display text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-                No matches
-              </h3>
-              <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <h3 className="font-display text-2xl font-semibold text-foreground">No matches</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
                 Try clearing filters or searching different keywords.
               </p>
             </div>
           ) : (
             <>
-              <div className="mb-8 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <div className="mb-8 text-sm text-muted-foreground">
                 Showing {displayArtworks.length} result{displayArtworks.length !== 1 ? 's' : ''}
               </div>
 

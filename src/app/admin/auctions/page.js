@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -16,7 +16,6 @@ export default function AdminAuctionsPage() {
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState({
     artworkId: '',
     startTime: '',
@@ -26,30 +25,36 @@ export default function AdminAuctionsPage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Check and update statuses every 10 seconds
+  // Poll statuses (UI + DB correction), without re-render loops
   useEffect(() => {
-    if (auctions.length === 0) return;
+    if (!auctions.length) return;
 
-    const checkStatuses = async () => {
-      const updatedAuctions = await Promise.all(
-        auctions.map(async (auction) => {
-          const correctStatus = getAuctionStatus(auction);
-          if (correctStatus !== auction.status) {
-            await updateAuctionStatusIfNeeded(auction.id, auction);
-          }
-          return { ...auction, status: correctStatus };
-        })
-      );
-      setAuctions(updatedAuctions);
-    };
+    const interval = setInterval(() => {
+      setAuctions((prev) => {
+        // update UI immediately
+        const next = prev.map((a) => {
+          const correct = getAuctionStatus(a);
+          return correct === a.status ? a : { ...a, status: correct };
+        });
 
-    // Check immediately
-    checkStatuses();
+        // push DB updates async (don’t block UI)
+        (async () => {
+          await Promise.all(
+            prev.map(async (a) => {
+              const correct = getAuctionStatus(a);
+              if (correct !== a.status) {
+                await updateAuctionStatusIfNeeded(a.id, { ...a, status: correct });
+              }
+            })
+          );
+        })();
 
-    // Check every 10 seconds
-    const interval = setInterval(checkStatuses, 10000);
+        return next;
+      });
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [auctions.length]);
@@ -57,28 +62,25 @@ export default function AdminAuctionsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [artworksData, auctionsData] = await Promise.all([
-        getAllArtworks(),
-        getAllAuctions()
-      ]);
-      
-      // Update statuses on initial load
-      const auctionsWithCorrectStatus = auctionsData.map(auction => ({
-        ...auction,
-        status: getAuctionStatus(auction)
-      }));
-      
+      const [artworksData, auctionsData] = await Promise.all([getAllArtworks(), getAllAuctions()]);
+
+      const withStatus = auctionsData.map((a) => ({ ...a, status: getAuctionStatus(a) }));
+
       setArtworks(artworksData);
-      setAuctions(auctionsWithCorrectStatus);
-      
-      // Update in database if needed (don't wait for this)
-      auctionsWithCorrectStatus.forEach(auction => {
-        if (auction.status !== auctionsData.find(a => a.id === auction.id).status) {
-          updateAuctionStatusIfNeeded(auction.id, auction);
-        }
-      });
-      
+      setAuctions(withStatus);
       setError('');
+
+      // Update DB if needed (async)
+      (async () => {
+        await Promise.all(
+          withStatus.map(async (a) => {
+            const original = auctionsData.find((x) => x.id === a.id);
+            if (original && original.status !== a.status) {
+              await updateAuctionStatusIfNeeded(a.id, a);
+            }
+          })
+        );
+      })();
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load data.');
@@ -87,12 +89,73 @@ export default function AdminAuctionsPage() {
     }
   };
 
+  const formatPrice = (price) =>
+    new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 0,
+    }).format(price ?? 0);
+
+  const formatDateTime = (value) => {
+    try {
+      return new Date(value).toLocaleString('en-ZA');
+    } catch {
+      return '';
+    }
+  };
+
+  const statusPill = (status) => {
+    const map = {
+      live: {
+        bg: 'rgba(190, 58, 38, 0.14)',
+        bd: 'rgba(190, 58, 38, 0.22)',
+        fg: 'rgba(255, 220, 215, 0.95)',
+      },
+      upcoming: {
+        bg: 'rgba(167, 107, 17, 0.14)',
+        bd: 'rgba(167, 107, 17, 0.22)',
+        fg: 'rgba(255, 235, 205, 0.95)',
+      },
+      ended: {
+        bg: 'rgba(111, 102, 94, 0.16)',
+        bd: 'rgba(111, 102, 94, 0.22)',
+        fg: 'rgba(243, 236, 228, 0.88)',
+      },
+      completed: {
+        bg: 'rgba(58, 122, 87, 0.14)',
+        bd: 'rgba(58, 122, 87, 0.22)',
+        fg: 'rgba(220, 255, 235, 0.95)',
+      },
+    };
+
+    const v = map[status] || map.ended;
+
+    return (
+      <span
+        className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+        style={{
+          background: v.bg,
+          border: `1px solid ${v.bd}`,
+          color: v.fg,
+          letterSpacing: '0.06em',
+        }}
+      >
+        {(status || 'ended').toUpperCase()}
+      </span>
+    );
+  };
+
+  const availableArtworks = useMemo(() => {
+    return artworks.filter((artwork) => {
+      if (artwork.status !== 'available') return false;
+      const hasAnyAuction = auctions.some((auction) => auction.artworkId === artwork.id);
+      return !hasAnyAuction;
+    });
+  }, [artworks, auctions]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -101,51 +164,40 @@ export default function AdminAuctionsPage() {
     setCreating(true);
 
     try {
-      // Validate
       if (!formData.artworkId || !formData.startTime || !formData.endTime) {
-        setError('Please fill in all required fields');
-        setCreating(false);
+        setError('Please fill in all required fields.');
         return;
       }
 
-      // Check if end time is after start time
       if (new Date(formData.endTime) <= new Date(formData.startTime)) {
-        setError('End time must be after start time');
-        setCreating(false);
+        setError('End time must be after start time.');
         return;
       }
 
-      // Get selected artwork
-      const artwork = artworks.find(a => a.id === formData.artworkId);
+      const artwork = artworks.find((a) => a.id === formData.artworkId);
       if (!artwork) {
-        setError('Selected artwork not found');
-        setCreating(false);
+        setError('Selected artwork not found.');
         return;
       }
 
-      // Determine auction status based on times
       const now = new Date();
-      const startTime = new Date(formData.startTime);
-      const endTime = new Date(formData.endTime);
-      
-      let status = 'upcoming';
-      if (now >= startTime && now < endTime) {
-        status = 'live';
-      } else if (now >= endTime) {
-        status = 'ended';
-      }
+      const start = new Date(formData.startTime);
+      const end = new Date(formData.endTime);
 
-      // Create auction
+      let status = 'upcoming';
+      if (now >= start && now < end) status = 'live';
+      else if (now >= end) status = 'ended';
+
       const auctionData = {
         artworkId: formData.artworkId,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        status: status,
+        status,
         currentBid: artwork.startingBid,
         currentBidderId: null,
         startingBid: artwork.startingBid,
         bidCount: 0,
-        minimumIncrement: parseFloat(formData.minimumIncrement),
+        minimumIncrement: parseFloat(formData.minimumIncrement || '10'),
         winnerId: null,
         finalPrice: null,
         createdAt: serverTimestamp(),
@@ -154,124 +206,122 @@ export default function AdminAuctionsPage() {
 
       await addDoc(collection(db, 'auctions'), auctionData);
 
-      // Reset form and refresh
       setFormData({
         artworkId: '',
         startTime: '',
         endTime: '',
         minimumIncrement: '10',
       });
+
       setShowCreateForm(false);
-      fetchData();
-      alert('Auction created successfully!');
-    } catch (error) {
-      console.error('Error creating auction:', error);
+      await fetchData();
+      alert('Auction created successfully.');
+    } catch (err) {
+      console.error('Error creating auction:', err);
       setError('Failed to create auction. Please try again.');
     } finally {
       setCreating(false);
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      live: 'bg-red-100 text-red-800',
-      upcoming: 'bg-yellow-100 text-yellow-800',
-      ended: 'bg-gray-100 text-gray-800',
-      completed: 'bg-green-100 text-green-800',
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status] || styles.ended}`}>
-        {status.toUpperCase()}
-      </span>
-    );
-  };
-
-  // Get available artworks (not sold, not in any auction)
-const availableArtworks = artworks.filter(artwork => {
-  // Must be available (not sold)
-  if (artwork.status !== 'available') return false;
-  
-  // Must NOT be in ANY auction (even ended ones)
-  const hasAnyAuction = auctions.some(
-    auction => auction.artworkId === artwork.id
-  );
-  
-  return !hasAnyAuction;
-});
-
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Manage Auctions
+          <h1 className="font-display text-3xl font-black" style={{ color: 'var(--text-primary)' }}>
+            Auctions
           </h1>
-          <p className="text-gray-600">
-            Create and schedule auctions for artworks
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+            Create and schedule auctions for artworks.
           </p>
         </div>
+
         <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+          onClick={() => setShowCreateForm((v) => !v)}
+          className="rounded-xl px-5 py-3 text-sm font-semibold transition hover:brightness-110"
+          style={{
+            background: showCreateForm ? 'rgba(255,255,255,0.06)' : 'var(--clay)',
+            color: showCreateForm ? 'var(--text-primary)' : '#F5EFE6',
+            border: showCreateForm ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.08)',
+          }}
+          type="button"
         >
-          {showCreateForm ? '✕ Cancel' : '+ Create Auction'}
+          {showCreateForm ? 'Cancel' : 'Create auction'}
         </button>
       </div>
 
-      {/* Error Message */}
+      {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        <div
+          className="mb-6 rounded-2xl px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(190, 58, 38, 0.10)',
+            border: '1px solid rgba(190, 58, 38, 0.22)',
+            color: 'rgba(255, 220, 215, 0.95)',
+          }}
+        >
           {error}
         </div>
       )}
 
       {/* Create Form */}
       {showCreateForm && (
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
-            Create New Auction
-          </h2>
-          
+        <div
+          className="rounded-2xl p-8 mb-8"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 18px 40px rgba(0,0,0,0.18)',
+          }}
+        >
+          <div className="mb-6">
+            <h2 className="font-display text-xl font-black" style={{ color: 'var(--text-primary)' }}>
+              Create new auction
+            </h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Choose an artwork and set the start/end times.
+            </p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Select Artwork */}
+            {/* Artwork */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Artwork <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Artwork <span style={{ color: 'rgba(190, 58, 38, 0.95)' }}>*</span>
               </label>
+
               <select
                 name="artworkId"
                 value={formData.artworkId}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text-primary)',
+                }}
               >
-                <option value="">Choose an artwork...</option>
-                {availableArtworks.map(artwork => (
+                <option value="">Choose an artwork…</option>
+                {availableArtworks.map((artwork) => (
                   <option key={artwork.id} value={artwork.id}>
-                    {artwork.title} by {artwork.artist} - Starting at {formatPrice(artwork.startingBid)}
+                    {artwork.title} — {artwork.artist} (Start {formatPrice(artwork.startingBid)})
                   </option>
                 ))}
               </select>
+
               {availableArtworks.length === 0 && (
-                <p className="text-sm text-red-600 mt-2">
-                  No available artworks. All artworks are either in active auctions or not available.
+                <p className="mt-2 text-sm" style={{ color: 'rgba(255, 220, 215, 0.92)' }}>
+                  No available artworks. Artworks are either sold or already used in an auction.
                 </p>
               )}
             </div>
 
-            {/* Start Time */}
+            {/* Start */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Time <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Start time <span style={{ color: 'rgba(190, 58, 38, 0.95)' }}>*</span>
               </label>
               <input
                 type="datetime-local"
@@ -279,14 +329,19 @@ const availableArtworks = artworks.filter(artwork => {
                 value={formData.startTime}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
 
-            {/* End Time */}
+            {/* End */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                End Time <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                End time <span style={{ color: 'rgba(190, 58, 38, 0.95)' }}>*</span>
               </label>
               <input
                 type="datetime-local"
@@ -294,14 +349,19 @@ const availableArtworks = artworks.filter(artwork => {
                 value={formData.endTime}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
 
-            {/* Minimum Increment */}
+            {/* Increment */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Bid Increment (ZAR)
+              <label className="block text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                Minimum increment (ZAR)
               </label>
               <input
                 type="number"
@@ -310,83 +370,101 @@ const availableArtworks = artworks.filter(artwork => {
                 onChange={handleChange}
                 min="1"
                 step="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={creating || availableArtworks.length === 0}
-              className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full rounded-xl px-6 py-3 text-sm font-semibold transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: 'var(--clay)',
+                color: '#F5EFE6',
+              }}
             >
-              {creating ? 'Creating...' : 'Create Auction'}
+              {creating ? 'Creating…' : 'Create auction'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Loading State */}
+      {/* Loading */}
       {loading && (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="flex justify-center py-14">
+          <div
+            className="h-12 w-12 animate-spin rounded-full border-2"
+            style={{ borderColor: 'rgba(255,255,255,0.10)', borderTopColor: 'var(--clay)' }}
+          />
         </div>
       )}
 
-      {/* Auctions List */}
+      {/* Auctions Table */}
       {!loading && (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div
+          className="overflow-hidden rounded-2xl"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 18px 40px rgba(0,0,0,0.18)',
+          }}
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Artwork ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Current Bid
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Bids
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Start Time
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
-                    End Time
-                  </th>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  {['Artwork', 'Current bid', 'Bids', 'Status', 'Start', 'End'].map((h) => (
+                    <th
+                      key={h}
+                      className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-widest"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+
+              <tbody>
                 {auctions.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                      No auctions created yet. Click "Create Auction" to get started.
+                    <td colSpan={6} className="px-6 py-12 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                      No auctions yet. Create one to get started.
                     </td>
                   </tr>
                 ) : (
-                  auctions.map((auction) => (
-                    <tr key={auction.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {auction.artworkId.substring(0, 12)}...
+                  auctions.map((auction, idx) => (
+                    <tr
+                      key={auction.id}
+                      style={{
+                        background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
+                      }}
+                    >
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {(auction.artworkId || '').substring(0, 12)}…
                       </td>
-                      <td className="px-6 py-4 font-semibold text-purple-600">
+
+                      <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--clay)' }}>
                         {formatPrice(auction.currentBid)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
+
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-primary)' }}>
                         {auction.bidCount || 0}
                       </td>
-                      <td className="px-6 py-4">
-                        {getStatusBadge(auction.status)}
+
+                      <td className="px-6 py-4">{statusPill(auction.status)}</td>
+
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {formatDateTime(auction.startTime)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
-                        {new Date(auction.startTime).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
-                        {new Date(auction.endTime).toLocaleString()}
+
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-muted)' }}>
+                        {formatDateTime(auction.endTime)}
                       </td>
                     </tr>
                   ))
@@ -394,6 +472,9 @@ const availableArtworks = artworks.filter(artwork => {
               </tbody>
             </table>
           </div>
+
+          {/* subtle bottom separator strip */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
         </div>
       )}
     </div>

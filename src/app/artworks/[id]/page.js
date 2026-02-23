@@ -21,16 +21,14 @@ export default function ArtworkDetailPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (artworkId) {
-      fetchArtwork();
-    }
+    if (artworkId) fetchArtwork();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artworkId]);
 
   const fetchArtwork = async () => {
     try {
       setLoading(true);
 
-      // Fetch artwork
       const artworkData = await getArtworkById(artworkId);
 
       if (!artworkData) {
@@ -40,14 +38,10 @@ export default function ArtworkDetailPage() {
       }
 
       // Check if artwork is in ANY auction
-      const auctionsQuery = query(
-        collection(db, 'auctions'),
-        where('artworkId', '==', artworkId)
-      );
+      const auctionsQuery = query(collection(db, 'auctions'), where('artworkId', '==', artworkId));
       const auctionSnapshot = await getDocs(auctionsQuery);
 
       if (!auctionSnapshot.empty) {
-        // Artwork is in an auction - redirect to auction page
         const auctionId = auctionSnapshot.docs[0].id;
         router.replace(`/auctions/${auctionId}`);
         return;
@@ -80,28 +74,30 @@ export default function ArtworkDetailPage() {
     alert(`"${artwork.title}" has been added to your cart!`);
   };
 
+  // Loading
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600"></div>
+      <div className="min-h-screen bg-background flex justify-center items-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary" />
       </div>
     );
   }
 
+  // Error / Not found
   if (error || !artwork) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-900 mb-4">
+      <div className="min-h-screen bg-background py-12 text-foreground">
+        <div className="container">
+          <div className="rounded-2xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] p-8 text-center">
+            <h2 className="text-2xl font-bold text-[rgba(255,225,225,0.95)] mb-3">
               {error || 'Artwork Not Found'}
             </h2>
-            <p className="text-red-700 mb-6">
-              The artwork you're looking for doesn't exist or has been removed.
+            <p className="text-sm text-[rgba(255,225,225,0.85)] mb-6">
+              The artwork you&apos;re looking for doesn&apos;t exist or has been removed.
             </p>
             <Link
               href="/artworks"
-              className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition"
+              className="inline-block rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:brightness-110 transition"
             >
               Back to Artworks
             </Link>
@@ -111,26 +107,28 @@ export default function ArtworkDetailPage() {
     );
   }
 
+  const isAvailableToBuy = artwork.status === 'available' && artwork.price;
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+    <div className="min-h-screen bg-background py-12 text-foreground">
+      <div className="container">
         {/* Back Button */}
         <button
           onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-purple-600 mb-8 transition"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </span>
           Back
         </button>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Image Section */}
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
             <img
               src={artwork.imageUrl || 'https://via.placeholder.com/800x600?text=No+Image'}
               alt={artwork.title}
@@ -140,56 +138,47 @@ export default function ArtworkDetailPage() {
 
           {/* Details Section */}
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">
-              {artwork.title}
-            </h1>
-            <p className="text-xl text-gray-600 mb-6">by {artwork.artist}</p>
+            <h1 className="font-display text-4xl font-black mb-2">{artwork.title}</h1>
+            <p className="text-lg text-muted-foreground mb-6">by {artwork.artist}</p>
 
             {/* Price Box */}
             {artwork.price && (
-              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6 mb-8">
-                <div className="text-sm text-purple-700 font-medium mb-2">Price</div>
-                <div className="text-4xl font-bold text-purple-600">
+              <div className="rounded-2xl border border-[rgba(160,106,75,0.55)] bg-[rgba(160,106,75,0.10)] p-6 mb-8">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Price</div>
+                <div className="font-display text-4xl font-black text-primary">
                   {formatPrice(artwork.price)}
                 </div>
               </div>
             )}
 
             {/* Artwork Details */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Artwork Details</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between border-b border-gray-200 pb-3">
-                  <span className="font-medium text-gray-700">Style</span>
-                  <span className="text-gray-900">{artwork.style}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-200 pb-3">
-                  <span className="font-medium text-gray-700">Medium</span>
-                  <span className="text-gray-900">{artwork.medium}</span>
-                </div>
+            <div className="rounded-2xl border border-border bg-card p-6 mb-8">
+              <h2 className="text-xl font-bold mb-4">Artwork Details</h2>
+
+              <div className="space-y-3 text-sm">
+                <DetailRow label="Style" value={artwork.style} />
+                <DetailRow label="Medium" value={artwork.medium} />
+
                 {artwork.dimensions && (
-                  <div className="flex justify-between border-b border-gray-200 pb-3">
-                    <span className="font-medium text-gray-700">Dimensions</span>
-                    <span className="text-gray-900">
-                      {artwork.dimensions.width} × {artwork.dimensions.height}
-                      {artwork.dimensions.depth && ` × ${artwork.dimensions.depth}`} cm
-                    </span>
-                  </div>
+                  <DetailRow
+                    label="Dimensions"
+                    value={`${artwork.dimensions.width} × ${artwork.dimensions.height}${
+                      artwork.dimensions.depth ? ` × ${artwork.dimensions.depth}` : ''
+                    } cm`}
+                  />
                 )}
-                {artwork.yearCreated && (
-                  <div className="flex justify-between border-b border-gray-200 pb-3">
-                    <span className="font-medium text-gray-700">Year</span>
-                    <span className="text-gray-900">{artwork.yearCreated}</span>
-                  </div>
-                )}
+
+                {artwork.yearCreated && <DetailRow label="Year" value={artwork.yearCreated} />}
               </div>
             </div>
 
             {/* Description */}
             {artwork.description && (
-              <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Description</h2>
-                <p className="text-gray-700 leading-relaxed">{artwork.description}</p>
+              <div className="rounded-2xl border border-border bg-card p-6 mb-8">
+                <h2 className="text-xl font-bold mb-4">Description</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {artwork.description}
+                </p>
               </div>
             )}
 
@@ -199,7 +188,8 @@ export default function ArtworkDetailPage() {
                 {artwork.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium"
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold
+                               bg-[rgba(255,255,255,0.06)] text-muted-foreground"
                   >
                     #{tag}
                   </span>
@@ -207,26 +197,38 @@ export default function ArtworkDetailPage() {
               </div>
             )}
 
-            {/* Action Button */}
-            {artwork.status === 'available' && artwork.price ? (
+            {/* Action */}
+            {isAvailableToBuy ? (
               <button
                 onClick={handleAddToCart}
-                className="block w-full bg-green-600 text-white text-center px-6 py-4 rounded-lg hover:bg-green-700 transition font-semibold text-lg"
+                className="w-full rounded-full px-6 py-4 text-center text-base font-semibold
+                           bg-primary text-primary-foreground hover:brightness-110 transition"
               >
-                🛒 Add to Cart
+                Add to Cart
               </button>
             ) : artwork.status === 'sold' ? (
-              <div className="text-center p-6 bg-gray-50 rounded-lg">
-                <p className="text-gray-800 font-medium">This artwork has been sold</p>
+              <div className="text-center p-6 rounded-2xl border border-border bg-card">
+                <p className="text-foreground font-medium">This artwork has been sold</p>
+                <p className="mt-1 text-sm text-muted-foreground">Check out other available works.</p>
               </div>
             ) : (
-              <div className="text-center p-6 bg-yellow-50 rounded-lg">
-                <p className="text-yellow-800 font-medium">This artwork is currently unavailable</p>
+              <div className="text-center p-6 rounded-2xl border border-border bg-card">
+                <p className="text-foreground font-medium">This artwork is currently unavailable</p>
+                <p className="mt-1 text-sm text-muted-foreground">It may be in review or temporarily hidden.</p>
               </div>
             )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-6 border-b border-border/60 pb-3 last:border-b-0 last:pb-0">
+      <span className="text-muted-foreground font-medium">{label}</span>
+      <span className="text-foreground text-right">{value || '—'}</span>
     </div>
   );
 }
