@@ -9,7 +9,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { updatePassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 
-import { getOrdersByUser, updateUser } from '@/lib/firestore';
+import { getOrdersByUser, updateUser, getArtworkById } from '@/lib/firestore';
 
 import {
   User as UserIcon,
@@ -40,7 +40,7 @@ export default function ProfilePage() {
 
   // Profile form state
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(''); // displayed, read-only by default
+  const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const [street, setStreet] = useState('');
@@ -51,8 +51,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Wishlist (stored on user doc)
-  const wishlist = Array.isArray(user?.wishlist) ? user.wishlist : [];
+  // Wishlist
+  const [wishlistArtworks, setWishlistArtworks] = useState([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const [wishlistWorking, setWishlistWorking] = useState(false);
 
   // Prevent overwriting user typing when refreshUser updates `user`
@@ -107,6 +108,41 @@ export default function ProfilePage() {
     };
   }, [user, router]);
 
+  // Fetch full artwork data for wishlist
+  useEffect(() => {
+    if (!user?.wishlist || !Array.isArray(user.wishlist)) {
+      setWishlistArtworks([]);
+      return;
+    }
+
+    const fetchWishlistArtworks = async () => {
+      setWishlistLoading(true);
+      try {
+        const artworkPromises = user.wishlist.map(async (item) => {
+          const artworkId = typeof item === 'string' ? item : item?.id || item?.artworkId;
+          if (!artworkId) return null;
+          
+          try {
+            const artwork = await getArtworkById(artworkId);
+            return artwork;
+          } catch (error) {
+            console.error(`Failed to fetch artwork ${artworkId}:`, error);
+            return null;
+          }
+        });
+
+        const artworks = await Promise.all(artworkPromises);
+        setWishlistArtworks(artworks.filter(Boolean)); // Remove nulls
+      } catch (error) {
+        console.error('Error fetching wishlist artworks:', error);
+      } finally {
+        setWishlistLoading(false);
+      }
+    };
+
+    fetchWishlistArtworks();
+  }, [user?.wishlist]);
+
   if (!user) return null;
 
   const displayName = (user?.name || user?.displayName || '').trim() || 'there';
@@ -155,10 +191,11 @@ export default function ProfilePage() {
 
   const tabs = [
     { id: 'details', label: 'Personal details', Icon: UserIcon },
+    { id: 'wishlist', label: 'Wishlist', Icon: Heart },
     { id: 'orders', label: 'Order history', Icon: Package },
     { id: 'bids', label: 'Active bids', Icon: Gavel },
     { id: 'won', label: 'Won auctions', Icon: Trophy },
-    { id: 'wishlist', label: 'Wishlist', Icon: Heart },
+    
   ];
 
   const Loader = () => (
@@ -191,7 +228,6 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      // 1) Update Firestore profile fields
       await updateUser(user.uid, {
         name: name.trim(),
         email: user.email || email,
@@ -202,7 +238,6 @@ export default function ProfilePage() {
         },
       });
 
-      // 2) Optional: update password in Firebase Auth
       if (newPassword && newPassword.trim().length > 0) {
         if (newPassword.trim().length < 6) {
           throw new Error('Password must be at least 6 characters.');
@@ -220,7 +255,6 @@ export default function ProfilePage() {
         }
       }
 
-      // 3) Refresh AuthContext user so Navbar updates
       if (typeof refreshUser === 'function') {
         await refreshUser();
       }
@@ -235,39 +269,28 @@ export default function ProfilePage() {
     }
   };
 
-  const normalizeWishlistItem = (item) => {
-    if (!item) return null;
-
-    if (typeof item === 'string') return { id: item };
-    if (typeof item === 'object') {
-      return {
-        id: item.id || item.artworkId || item.slug || '',
-        title: item.title,
-        artist: item.artist,
-        imageUrl: item.imageUrl || item.image,
-      };
-    }
-    return null;
-  };
-
   const removeFromWishlist = async (id) => {
     if (!id || wishlistWorking) return;
 
     setWishlistWorking(true);
     try {
-      const next = wishlist
-        .map(normalizeWishlistItem)
-        .filter(Boolean)
-        .filter((w) => w.id !== id)
-        .map((w) => w.id);
+      const current = user?.wishlist || [];
+      const ids = current
+        .map((x) => (typeof x === 'string' ? x : x?.id || x?.artworkId))
+        .filter(Boolean);
+
+      const next = ids.filter((artworkId) => artworkId !== id);
 
       await updateUser(user.uid, { wishlist: next });
+
+      // Update local state immediately
+      setWishlistArtworks(prev => prev.filter(artwork => artwork.id !== id));
 
       if (typeof refreshUser === 'function') {
         await refreshUser();
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to remove from wishlist:', err);
     } finally {
       setWishlistWorking(false);
     }
@@ -323,7 +346,6 @@ export default function ProfilePage() {
                 className="space-y-6 rounded-2xl border border-border bg-card p-6 md:p-8"
                 style={{ boxShadow: 'var(--shadow-card)' }}
               >
-                {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="font-display text-2xl font-black text-foreground">
@@ -334,7 +356,6 @@ export default function ProfilePage() {
                     </p>
                   </div>
 
-                  {/* Account mini-card */}
                   <div className="w-full rounded-2xl border border-border bg-background/40 p-4 sm:w-[260px]">
                     <div className="text-xs uppercase tracking-widest text-muted-foreground">
                       Account
@@ -348,7 +369,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Error */}
                 {formError && (
                   <div className="rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.18)] px-4 py-3 text-sm text-[rgba(255,225,225,0.95)]">
                     {formError}
@@ -356,7 +376,6 @@ export default function ProfilePage() {
                 )}
 
                 <div className="space-y-4">
-                  {/* Full Name */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Full Name
@@ -369,7 +388,6 @@ export default function ProfilePage() {
                     />
                   </div>
 
-                  {/* Email (read-only) */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Email Address
@@ -379,12 +397,8 @@ export default function ProfilePage() {
                       disabled
                       className="mt-2 w-full cursor-not-allowed rounded-xl border border-border bg-[rgba(255,255,255,0.02)] px-4 py-3 text-sm text-muted-foreground/80 outline-none"
                     />
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Email changes need Firebase re-auth. If you want that, I can add it.
-                    </p>
                   </div>
 
-                  {/* New Password */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       New Password
@@ -399,7 +413,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* horizontal line */}
                 <div className="border-t border-border pt-6">
                   <h3 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-foreground">
                     <MapPin size={16} /> Delivery Address
@@ -500,9 +513,12 @@ export default function ProfilePage() {
                           {order.items.map((item, i) => (
                             <div key={i} className="flex-shrink-0">
                               <img
-                                src={item.imageUrl || 'https://via.placeholder.com/60x60'}
+                                src={item.imageUrl || '/Images/placeholder.jpg'}
                                 alt={item.title || 'Artwork'}
                                 className="h-14 w-14 rounded-xl object-cover"
+                                onError={(e) => {
+                                  e.target.src = '/Images/placeholder.jpg';
+                                }}
                               />
                               <p className="mt-1 w-14 truncate text-xs text-muted-foreground">{item.title}</p>
                             </div>
@@ -530,14 +546,14 @@ export default function ProfilePage() {
           {activeTab === 'bids' && (
             <div className="mx-auto max-w-2xl rounded-2xl bg-card p-6 md:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
               <h2 className="font-display text-xl font-black text-foreground">Active bids</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Auctions you’ve interacted with recently.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Auctions you've interacted with recently.</p>
 
               {bidsLoading ? (
                 <Loader />
               ) : activeBids.length === 0 ? (
                 <EmptyState
                   title="No active bids"
-                  body="Place bids on live auctions and they’ll show up here."
+                  body="Place bids on live auctions and they'll show up here."
                   ctaHref="/auctions"
                   ctaLabel="Browse auctions"
                 />
@@ -598,7 +614,7 @@ export default function ProfilePage() {
           {activeTab === 'won' && (
             <div className="mx-auto max-w-2xl rounded-2xl bg-card p-6 md:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
               <h2 className="font-display text-xl font-black text-foreground">Won auctions</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Auctions you’ve won.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Auctions you've won.</p>
 
               {wonAuctions.length === 0 ? (
                 <EmptyState
@@ -648,53 +664,60 @@ export default function ProfilePage() {
               <h2 className="font-display text-xl font-black text-foreground">Wishlist</h2>
               <p className="mt-1 text-sm text-muted-foreground">Saved artworks you want to come back to.</p>
 
-              {wishlist.length === 0 ? (
+              {wishlistLoading ? (
+                <Loader />
+              ) : wishlistArtworks.length === 0 ? (
                 <EmptyState
                   title="Your wishlist is empty"
-                  body="Save artworks to your wishlist and they’ll show up here."
+                  body="Save artworks to your wishlist and they'll show up here."
                   ctaHref="/artworks"
                   ctaLabel="Browse artworks"
                 />
               ) : (
                 <div className="mt-6 space-y-4">
-                  {wishlist
-                    .map(normalizeWishlistItem)
-                    .filter(Boolean)
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-5 rounded-2xl border border-border bg-background/40 p-5"
-                      >
-                        <img
-                          src={item.imageUrl || 'https://via.placeholder.com/80x80'}
-                          alt={item.title || 'Artwork'}
-                          className="h-20 w-20 rounded-xl object-cover"
-                        />
+                  {wishlistArtworks.map((artwork) => (
+                    <div
+                      key={artwork.id}
+                      className="flex items-center gap-5 rounded-2xl border border-border bg-background/40 p-5"
+                    >
+                      <img
+                        src={artwork.imageUrl || '/Images/placeholder.jpg'}
+                        alt={artwork.title || 'Artwork'}
+                        className="h-20 w-20 rounded-xl object-cover"
+                        onError={(e) => {
+                          e.target.src = '/Images/placeholder.jpg';
+                        }}
+                      />
 
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-semibold text-foreground">
-                            {item.title || `Artwork ${item.id}`}
-                          </p>
-                          <p className="truncate text-sm text-muted-foreground">{item.artist || '—'}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-foreground">
+                          {artwork.title || 'Untitled'}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          by {artwork.artist || 'Unknown Artist'}
+                        </p>
+                        <p className="mt-1 font-display text-lg font-bold text-primary">
+                          {formatPrice(artwork.price || artwork.startingBid || 0)}
+                        </p>
 
-                          <Link
-                            href="/artworks"
-                            className="mt-2 inline-block text-sm font-semibold text-primary hover:opacity-80"
-                          >
-                            View artworks
-                          </Link>
-                        </div>
-
-                        <button
-                          onClick={() => removeFromWishlist(item.id)}
-                          disabled={wishlistWorking}
-                          className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-60"
-                          title="Remove from wishlist"
+                        <Link
+                          href={`/artworks/${artwork.id}`}
+                          className="mt-2 inline-block text-sm font-semibold text-primary hover:opacity-80"
                         >
-                          <Trash2 size={16} />
-                        </button>
+                          View artwork →
+                        </Link>
                       </div>
-                    ))}
+
+                      <button
+                        onClick={() => removeFromWishlist(artwork.id)}
+                        disabled={wishlistWorking}
+                        className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive disabled:opacity-60"
+                        title="Remove from wishlist"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -6,14 +6,18 @@ import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { updateUser } from '@/lib/firestore';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const redirectUrl = searchParams.get('redirect') || '/';
+  const wishId = searchParams.get('wish'); // artworkId passed from ArtworkCard
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,12 +30,32 @@ export default function LoginPage() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
 
-      // Fetch user role from Firestore to determine redirect
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      const userData = userDoc.data();
+      // Fetch user role + existing wishlist
+      const userRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.data() || {};
 
-      if (userData?.role === 'admin') {
+      const isAdmin = userData?.role === 'admin';
+
+      // If a wishlist intent exists AND user is not admin, add it (idempotent)
+      if (!isAdmin && wishId) {
+        const current = Array.isArray(userData?.wishlist) ? userData.wishlist : [];
+
+        // Tolerate old formats (objects), normalize to ids
+        const ids = current
+          .map((x) => (typeof x === 'string' ? x : x?.id || x?.artworkId))
+          .filter(Boolean);
+
+        if (!ids.includes(wishId)) {
+          const next = [...ids, wishId];
+          await updateUser(uid, { wishlist: next });
+        }
+      }
+
+      // Redirect
+      if (isAdmin) {
         router.push('/admin');
       } else {
         router.push(redirectUrl);
@@ -50,6 +74,15 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Preserve redirect AND wish when sending the user to register
+  const registerHref = (() => {
+    const params = new URLSearchParams();
+    if (redirectUrl && redirectUrl !== '/') params.set('redirect', redirectUrl);
+    if (wishId) params.set('wish', wishId);
+    const qs = params.toString();
+    return `/register${qs ? `?${qs}` : ''}`;
+  })();
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background text-foreground">
@@ -143,7 +176,7 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link
-              href={`/register${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
+              href={registerHref}
               className="font-semibold text-primary hover:opacity-80"
             >
               Register here
