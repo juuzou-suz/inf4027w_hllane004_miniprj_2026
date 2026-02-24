@@ -14,6 +14,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { searchArtworksByImage } from '@/lib/imageSearch';
+import { useCart } from '@/context/CartContext';
 import ArtworkCard from '@/components/artworkCard';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import { parseSearchWithAI, basicKeywordSearch } from '@/lib/aiSearch';
@@ -66,6 +67,7 @@ const features = [
     description: 'Real-time bidding that feels premium — clean UI, clear pricing, calm focus on the art.',
   },
 ];
+
 
 function HeroSlideshow() {
   const [current, setCurrent] = useState(0);
@@ -438,6 +440,8 @@ function WhyChooseSection() {
 }
 
 export default function Home() {
+
+  const { addToCart } = useCart();
   const [artworks, setArtworks] = useState([]);
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -669,9 +673,15 @@ export default function Home() {
               </div>
 
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {featuredArtworks.map((artwork) => (
-                  <ArtworkCard key={artwork.id} artwork={artwork} auction={getAuctionForArtwork(artwork.id)} />
-                ))}
+                
+{featuredArtworks.map((artwork) => (
+  <ArtworkCard
+    key={artwork.id}
+    artwork={artwork}
+    auction={getAuctionForArtwork(artwork.id)}
+    onAddToCart={addToCart}
+  />
+))}
               </div>
             </section>
           )}

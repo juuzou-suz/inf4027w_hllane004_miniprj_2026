@@ -71,7 +71,7 @@ export default function CheckoutPage() {
       await Promise.all(cart.map((item) => updateDoc(doc(db, 'artworks', item.id), { status: 'sold' })));
 
       clearCart();
-      router.push(`/order-confirmation?orderId=${orderId}`);
+      router.push(`/orderConfirmation?orderId=${orderId}`);
     } catch (err) {
       console.error('Error placing order:', err);
       setError('Failed to place order. Please try again.');

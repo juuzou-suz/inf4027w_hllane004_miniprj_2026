@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
-
+import { useCart } from '@/context/CartContext';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import ArtworkCard from '@/components/artworkCard';
 import { parseSearchWithAI, basicKeywordSearch } from '@/lib/aiSearch';
@@ -152,6 +152,8 @@ export default function ArtworksPage() {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
 
+  const { addToCart } = useCart();
+
   const [filterStyle, setFilterStyle] = useState('');
   const [filterMedium, setFilterMedium] = useState('');
   const [filterMaxPrice, setFilterMaxPrice] = useState('');
@@ -286,7 +288,7 @@ export default function ArtworksPage() {
 
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {displayArtworks.map((artwork) => (
-                  <ArtworkCard key={artwork.id} artwork={artwork} />
+                  <ArtworkCard key={artwork.id} artwork={artwork} onAddToCart={addToCart} />
                 ))}
               </div>
             </>

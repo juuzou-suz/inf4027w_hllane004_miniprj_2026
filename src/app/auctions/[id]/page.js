@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getArtworkById } from '@/lib/firestore';
+import { getAuctionStatus } from '@/lib/auctionHelpers';
 import Link from 'next/link';
 
 export default function AuctionDetailPage() {
@@ -33,66 +34,88 @@ export default function AuctionDetailPage() {
   const [error, setError] = useState('');
   const [bidAmount, setBidAmount] = useState('');
 
-  // Fetch auction + artwork
-  useEffect(() => {
-    if (auctionId) fetchAuctionData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auctionId]);
+  // Compute the REAL status from timestamps, not what's stored in Firestore
+const [now, setNow] = useState(new Date());
 
-  // Real-time bids
+useEffect(() => {
+  const interval = setInterval(() => setNow(new Date()), 1000);
+  return () => clearInterval(interval);
+}, []);
+
+const realStatus = useMemo(() => {
+  if (!auction) return null;
+  return getAuctionStatus(auction);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [auction, now]); // now ticks every second, forcing recompute
+
+  // Fetch initial auction + artwork
   useEffect(() => {
     if (!auctionId) return;
 
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const auctionDoc = await getDoc(doc(db, 'auctions', auctionId));
+        if (!auctionDoc.exists()) {
+          setError('Auction not found');
+          return;
+        }
+        const auctionData = { id: auctionDoc.id, ...auctionDoc.data() };
+        setAuction(auctionData);
+
+        const artworkData = await getArtworkById(auctionData.artworkId);
+        setArtwork(artworkData);
+      } catch (err) {
+        console.error('Error fetching auction:', err);
+        setError('Failed to load auction details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [auctionId]);
+
+  // Real-time auction listener
+  useEffect(() => {
+    if (!auctionId) return;
+    const unsubscribe = onSnapshot(doc(db, 'auctions', auctionId), (snap) => {
+      if (snap.exists()) setAuction({ id: snap.id, ...snap.data() });
+    });
+    return () => unsubscribe();
+  }, [auctionId]);
+
+  // Real-time bids listener
+  useEffect(() => {
+    if (!auctionId) return;
     const bidsQuery = query(
       collection(db, 'bids'),
       where('auctionId', '==', auctionId),
       orderBy('timestamp', 'desc')
     );
-
     const unsubscribe = onSnapshot(bidsQuery, (snapshot) => {
-      const bidsData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setBids(bidsData);
+      setBids(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
-
     return () => unsubscribe();
   }, [auctionId]);
 
-  // Real-time auction
+  // Update Firestore status when realStatus changes and differs from stored status
   useEffect(() => {
-    if (!auctionId) return;
+    if (!auction || !auctionId || !realStatus) return;
+    if (realStatus === auction.status) return;
 
-    const unsubscribe = onSnapshot(doc(db, 'auctions', auctionId), (snap) => {
-      if (snap.exists()) setAuction({ id: snap.id, ...snap.data() });
-    });
+    updateDoc(doc(db, 'auctions', auctionId), { status: realStatus }).catch(console.error);
 
-    return () => unsubscribe();
-  }, [auctionId]);
-
-  const fetchAuctionData = async () => {
-    try {
-      setLoading(true);
-
-      const auctionDoc = await getDoc(doc(db, 'auctions', auctionId));
-      if (!auctionDoc.exists()) {
-        setError('Auction not found');
-        setLoading(false);
-        return;
-      }
-
-      const auctionData = { id: auctionDoc.id, ...auctionDoc.data() };
-      setAuction(auctionData);
-
-      const artworkData = await getArtworkById(auctionData.artworkId);
-      setArtwork(artworkData);
-
-      setError('');
-    } catch (err) {
-      console.error('Error fetching auction:', err);
-      setError('Failed to load auction details');
-    } finally {
-      setLoading(false);
+    // If auction just ended, write the winner
+    if (realStatus === 'ended' && auction.currentBidderId && !auction.winnerId) {
+      updateDoc(doc(db, 'auctions', auctionId), {
+        status: 'ended',
+        winnerId: auction.currentBidderId,
+        winnerEmail: auction.currentBidderEmail || null,
+        winningBid: auction.currentBid,
+      }).catch(console.error);
     }
-  };
+  }, [realStatus, auction, auctionId]);
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('en-ZA', {
@@ -107,85 +130,52 @@ export default function AuctionDetailPage() {
     return date.toLocaleString('en-ZA');
   };
 
-  const getTimeRemaining = () => {
-    if (!auction?.endTime) return 'N/A';
-    const end = new Date(auction.endTime);
-    const now = new Date();
-    const diff = end - now;
-
-    if (diff <= 0) return 'Ended';
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-    return `${hours}h ${minutes}m ${seconds}s`;
-  };
-
-  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining());
-  useEffect(() => {
-    const interval = setInterval(() => setTimeRemaining(getTimeRemaining()), 1000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auction]);
-
+  const timeRemaining = useMemo(() => {
+  if (!auction?.endTime) return 'N/A';
+  const end = new Date(auction.endTime);
+  const diff = end - now;
+  if (diff <= 0) return 'Ended';
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return `${hours}h ${minutes}m ${seconds}s`;
+}, [auction?.endTime, now]);
   const statusBadge = useMemo(() => {
-    const base =
-      'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold';
+    const base = 'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold';
 
-    if (!auction?.status) {
-      return <span className={base + ' border-border text-muted-foreground'}>Status</span>;
-    }
+    if (!realStatus) return <span className={base + ' border-border text-muted-foreground'}>Status</span>;
 
-    if (auction.status === 'live') {
+    if (realStatus === 'live') {
       return (
-        <span
-          className={base}
-          style={{
-            borderColor: 'rgba(255,120,120,0.30)',
-            background: 'rgba(190,58,38,0.18)',
-            color: 'rgba(255,225,225,0.95)',
-          }}
-        >
+        <span className={base} style={{ borderColor: 'rgba(255,120,120,0.30)', background: 'rgba(190,58,38,0.18)', color: 'rgba(255,225,225,0.95)' }}>
           🔴 Live
         </span>
       );
     }
-
-    if (auction.status === 'upcoming') {
+    if (realStatus === 'upcoming') {
       return (
-        <span
-          className={base}
-          style={{
-            borderColor: 'rgba(255,200,120,0.28)',
-            background: 'rgba(255,200,120,0.14)',
-            color: 'rgba(255,235,205,0.95)',
-          }}
-        >
+        <span className={base} style={{ borderColor: 'rgba(255,200,120,0.28)', background: 'rgba(255,200,120,0.14)', color: 'rgba(255,235,205,0.95)' }}>
           📅 Upcoming
         </span>
       );
     }
-
     return (
-      <span
-        className={base}
-        style={{
-          borderColor: 'rgba(255,255,255,0.12)',
-          background: 'rgba(255,255,255,0.06)',
-          color: 'rgba(245,239,230,0.90)',
-        }}
-      >
+      <span className={base} style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: 'rgba(245,239,230,0.90)' }}>
         ⏹️ Ended
       </span>
     );
-  }, [auction?.status]);
+  }, [realStatus]);
 
   const handlePlaceBid = async (e) => {
     e.preventDefault();
 
     if (!user) {
       router.push(`/login?redirect=/auctions/${auctionId}`);
+      return;
+    }
+
+    if (realStatus !== 'live') {
+      setError('This auction is not currently live');
       return;
     }
 
@@ -202,11 +192,6 @@ export default function AuctionDetailPage() {
 
       if (!auction) {
         setError('Auction data not ready');
-        return;
-      }
-
-      if (auction.status !== 'live') {
-        setError('This auction is not currently live');
         return;
       }
 
@@ -240,6 +225,7 @@ export default function AuctionDetailPage() {
       await updateDoc(doc(db, 'auctions', auctionId), {
         currentBid: amount,
         currentBidderId: user.uid,
+        currentBidderEmail: user.email,
         bidCount: (auction.bidCount || 0) + 1,
       });
 
@@ -266,14 +252,8 @@ export default function AuctionDetailPage() {
       <div className="min-h-screen bg-background py-10 text-foreground">
         <div className="container">
           <div className="rounded-2xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] p-8 text-center">
-            <h2 className="font-display text-2xl font-black text-[rgba(255,225,225,0.95)]">
-              {error}
-            </h2>
-            <Link
-              href="/auctions"
-              className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110
-                         bg-primary text-primary-foreground"
-            >
+            <h2 className="font-display text-2xl font-black text-[rgba(255,225,225,0.95)]">{error}</h2>
+            <Link href="/auctions" className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110 bg-primary text-primary-foreground">
               Back to auctions
             </Link>
           </div>
@@ -283,6 +263,10 @@ export default function AuctionDetailPage() {
   }
 
   const minBid = (auction?.currentBid || 0) + (auction?.minimumIncrement || 0);
+  const isEnded = realStatus === 'ended';
+  const winnerId = auction?.winnerId || (isEnded ? auction?.currentBidderId : null);
+  const winnerEmail = auction?.winnerEmail || auction?.currentBidderEmail || null;
+  const isWinner = user && winnerId === user.uid;
 
   return (
     <div className="min-h-screen bg-background py-10 text-foreground">
@@ -292,9 +276,7 @@ export default function AuctionDetailPage() {
           onClick={() => router.back()}
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80 text-muted-foreground"
         >
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card">
-            ←
-          </span>
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card">←</span>
           Back
         </button>
 
@@ -317,24 +299,44 @@ export default function AuctionDetailPage() {
                 <p className="mt-1 text-base text-muted-foreground">
                   by <span className="font-semibold text-foreground">{artwork.artist}</span>
                 </p>
-
                 {artwork.description && (
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    {artwork.description}
-                  </p>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{artwork.description}</p>
                 )}
-
                 <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                   <MiniStat label="Style" value={artwork.style || '—'} />
                   <MiniStat label="Medium" value={artwork.medium || '—'} />
                   {artwork.dimensions && (
-                    <MiniStat
-                      label="Size"
-                      value={`${artwork.dimensions.width} × ${artwork.dimensions.height} cm`}
-                      full
-                    />
+                    <MiniStat label="Size" value={`${artwork.dimensions.width} × ${artwork.dimensions.height} cm`} full />
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Winner banner */}
+            {isEnded && winnerId && (
+              <div
+                className="rounded-2xl border p-6"
+                style={{ borderColor: 'rgba(160,106,75,0.45)', background: 'rgba(160,106,75,0.10)' }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Auction ended · Winner
+                </p>
+                <p className="mt-2 font-display text-2xl font-black text-foreground">
+                  {isWinner ? '🏆 You won this auction!' : `🏆 ${winnerEmail || 'Winner determined'}`}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Winning bid: <span className="font-semibold text-foreground">{formatPrice(auction?.currentBid)}</span>
+                </p>
+              </div>
+            )}
+
+            {/* Ended with no bids */}
+            {isEnded && !winnerId && (
+              <div
+                className="rounded-2xl border p-6"
+                style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}
+              >
+                <p className="text-sm font-semibold text-foreground">Auction ended with no bids</p>
               </div>
             )}
 
@@ -342,15 +344,11 @@ export default function AuctionDetailPage() {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
               <div className="flex items-end justify-between gap-4">
                 <h3 className="font-display text-xl font-black">Bid history</h3>
-                <span className="text-xs text-muted-foreground">
-                  {bids.length} bid{bids.length === 1 ? '' : 's'}
-                </span>
+                <span className="text-xs text-muted-foreground">{bids.length} bid{bids.length === 1 ? '' : 's'}</span>
               </div>
 
               {bids.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">
-                  No bids yet. Be the first to bid.
-                </p>
+                <p className="py-10 text-center text-sm text-muted-foreground">No bids yet. Be the first to bid.</p>
               ) : (
                 <div className="mt-4 space-y-3 max-h-96 overflow-y-auto pr-1">
                   {bids.map((bid, index) => {
@@ -377,13 +375,12 @@ export default function AuctionDetailPage() {
                                     color: 'var(--text-primary)',
                                   }}
                                 >
-                                  Current highest
+                                  {isEnded ? 'Winning bid' : 'Current highest'}
                                 </span>
                               )}
                             </div>
                             <div className="mt-1 text-xs text-muted-foreground">{bid.userEmail}</div>
                           </div>
-
                           <div className="text-xs text-muted-foreground">{formatTime(bid.timestamp)}</div>
                         </div>
                       </div>
@@ -394,7 +391,7 @@ export default function AuctionDetailPage() {
             </div>
           </div>
 
-          {/* Right */}
+          {/* Right sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 rounded-2xl border border-border bg-card p-6 shadow-lg">
               <div className="flex items-center justify-between">
@@ -404,26 +401,23 @@ export default function AuctionDetailPage() {
                 </span>
               </div>
 
-              {/* Current bid */}
+              {/* Current / final bid */}
               <div className="mt-5">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">Current bid</div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                  {isEnded ? 'Final bid' : 'Current bid'}
+                </div>
                 <div className="mt-1 font-display text-3xl font-black text-foreground">
                   {formatPrice(auction?.currentBid)}
                 </div>
               </div>
 
-              {/* Time remaining */}
-              {auction?.status === 'live' && (
+              {/* Time remaining — only when live */}
+              {realStatus === 'live' && (
                 <div
                   className="mt-5 rounded-2xl border p-4"
-                  style={{
-                    borderColor: 'rgba(255,120,120,0.30)',
-                    background: 'rgba(190,58,38,0.14)',
-                  }}
+                  style={{ borderColor: 'rgba(255,120,120,0.30)', background: 'rgba(190,58,38,0.14)' }}
                 >
-                  <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                    Time remaining
-                  </div>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground">Time remaining</div>
                   <div className="mt-1 font-display text-2xl font-black text-[rgba(255,225,225,0.95)]">
                     {timeRemaining}
                   </div>
@@ -439,7 +433,8 @@ export default function AuctionDetailPage() {
 
               {/* Bid panel */}
               <div className="mt-6">
-                {auction?.status === 'live' && (
+                {/* LIVE */}
+                {realStatus === 'live' && (
                   <>
                     {error && (
                       <div className="mb-4 rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] px-3 py-2 text-sm text-[rgba(255,225,225,0.95)]">
@@ -460,16 +455,13 @@ export default function AuctionDetailPage() {
                             min={minBid}
                             step={auction.minimumIncrement}
                             placeholder={`Min: ${formatPrice(minBid)}`}
-                            className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none
-                                       bg-transparent text-foreground placeholder:text-muted-foreground/70"
+                            className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none bg-transparent text-foreground placeholder:text-muted-foreground/70"
                           />
                         </div>
-
                         <button
                           type="submit"
                           disabled={bidding}
-                          className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110
-                                     disabled:opacity-60 bg-primary text-primary-foreground"
+                          className="w-full rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-60 bg-primary text-primary-foreground"
                         >
                           {bidding ? 'Placing bid…' : 'Place bid'}
                         </button>
@@ -477,8 +469,7 @@ export default function AuctionDetailPage() {
                     ) : (
                       <Link
                         href={`/login?redirect=/auctions/${auctionId}`}
-                        className="block w-full rounded-full px-6 py-3 text-center text-sm font-semibold transition-all hover:brightness-110
-                                   bg-primary text-primary-foreground"
+                        className="block w-full rounded-full px-6 py-3 text-center text-sm font-semibold transition-all hover:brightness-110 bg-primary text-primary-foreground"
                       >
                         Log in to bid
                       </Link>
@@ -486,13 +477,11 @@ export default function AuctionDetailPage() {
                   </>
                 )}
 
-                {auction?.status === 'upcoming' && (
+                {/* UPCOMING */}
+                {realStatus === 'upcoming' && (
                   <div
                     className="rounded-2xl border p-4 text-center"
-                    style={{
-                      borderColor: 'rgba(255,200,120,0.28)',
-                      background: 'rgba(255,200,120,0.14)',
-                    }}
+                    style={{ borderColor: 'rgba(255,200,120,0.28)', background: 'rgba(255,200,120,0.14)' }}
                   >
                     <p className="text-sm font-semibold text-foreground">Auction starts</p>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -501,19 +490,23 @@ export default function AuctionDetailPage() {
                   </div>
                 )}
 
-                {auction?.status === 'ended' && (
+                {/* ENDED */}
+                {isEnded && (
                   <div
                     className="rounded-2xl border p-4 text-center"
-                    style={{
-                      borderColor: 'rgba(255,255,255,0.12)',
-                      background: 'rgba(255,255,255,0.06)',
-                    }}
+                    style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)' }}
                   >
                     <p className="text-sm font-semibold text-foreground">Auction ended</p>
-                    {auction.winnerId && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Winning bid: {formatPrice(auction.currentBid)}
-                      </p>
+                    {winnerId ? (
+                      <>
+                        <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">Winner</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {isWinner ? '🏆 You!' : winnerEmail || 'Determined'}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">{formatPrice(auction.currentBid)}</p>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-sm text-muted-foreground">No bids were placed</p>
                     )}
                   </div>
                 )}
@@ -536,14 +529,8 @@ export default function AuctionDetailPage() {
 function MiniStat({ label, value, full }) {
   return (
     <div
-      className={[
-        'rounded-2xl border p-3',
-        full ? 'sm:col-span-2' : '',
-      ].join(' ')}
-      style={{
-        borderColor: 'rgba(255,255,255,0.10)',
-        background: 'rgba(255,255,255,0.04)',
-      }}
+      className={['rounded-2xl border p-3', full ? 'sm:col-span-2' : ''].join(' ')}
+      style={{ borderColor: 'rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.04)' }}
     >
       <span className="text-xs uppercase tracking-widest text-muted-foreground">{label}</span>
       <div className="mt-1 font-semibold text-foreground">{value}</div>
