@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Sparkles, X } from 'lucide-react';
 import { getArtworkById } from '@/lib/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { generateArtworkSummary } from '@/lib/aiSummary';
 
 export default function ArtworkDetailPage() {
   const params = useParams();
@@ -20,9 +22,14 @@ export default function ArtworkDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // AI Summary states
+  const [showSummary, setShowSummary] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
+
   useEffect(() => {
     if (artworkId) fetchArtwork();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artworkId]);
 
   const fetchArtwork = async () => {
@@ -55,6 +62,28 @@ export default function ArtworkDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+    const handleGenerateSummary = async () => {
+    if (summary) {
+      // If already generated, just show it
+      setShowSummary(true);
+      return;
+    }
+
+    setSummaryLoading(true);
+    setSummaryError('');
+    setShowSummary(true);
+
+    const result = await generateArtworkSummary(artwork);
+
+    if (result.error) {
+      setSummaryError(result.error);
+    } else {
+      setSummary(result.summary);
+    }
+
+    setSummaryLoading(false);
   };
 
   const formatPrice = (price) =>
@@ -140,7 +169,64 @@ export default function ArtworkDetailPage() {
           <div>
             <h1 className="font-display text-4xl font-black mb-2">{artwork.title}</h1>
             <p className="text-lg text-muted-foreground mb-6">by {artwork.artist}</p>
+{/* AI Summary Button */}
+            <button
+              onClick={handleGenerateSummary}
+              disabled={summaryLoading}
+              className="mb-6 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border transition-all"
+              style={{
+                background: showSummary ? 'rgba(160,106,75,0.12)' : 'transparent',
+                borderColor: 'var(--clay)',
+                color: 'var(--clay)'
+              }}
+            >
+              <Sparkles size={16} />
+              {summaryLoading ? 'Generating...' : summary ? 'View AI Summary' : 'Generate AI Summary'}
+            </button>
 
+            {/* AI Summary Display */}
+            {showSummary && (
+              <div className="mb-6 p-6 rounded-xl border relative" style={{
+                background: 'rgba(160,106,75,0.05)',
+                borderColor: 'var(--clay)'
+              }}>
+                <button
+                  onClick={() => setShowSummary(false)}
+                  className="absolute top-4 right-4 p-1 rounded-full transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={16} style={{ color: 'var(--clay)' }} />
+                  <h3 className="font-semibold" style={{ color: 'var(--clay)' }}>
+                    AI-Generated Summary
+                  </h3>
+                </div>
+
+                {summaryLoading ? (
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 spinner"></div>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                      Analyzing artwork...
+                    </p>
+                  </div>
+                ) : summaryError ? (
+                  <p className="text-sm" style={{ color: '#B8674F' }}>
+                    {summaryError}
+                  </p>
+                ) : (
+                  <div className="prose prose-sm max-w-none" style={{ color: 'var(--text-primary)' }}>
+                    {summary.split('\n\n').map((paragraph, i) => (
+                      <p key={i} className="mb-3 last:mb-0 leading-relaxed">
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {/* Price Box */}
             {artwork.price && (
               <div className="rounded-2xl border border-[rgba(160,106,75,0.55)] bg-[rgba(160,106,75,0.10)] p-6 mb-8">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -11,8 +11,9 @@ import {
   Compass,
   Heart,
   Gavel,
+  Upload,
 } from 'lucide-react';
-
+import { searchArtworksByImage } from '@/lib/imageSearch';
 import ArtworkCard from '@/components/artworkCard';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import { parseSearchWithAI, basicKeywordSearch } from '@/lib/aiSearch';
@@ -188,12 +189,23 @@ function HeroSlideshow() {
   );
 }
 
-function SearchSection({ liveAuctionCount, hasResults, onSearch, onClear }) {
+function SearchSection({
+  liveAuctionCount,
+  hasResults,
+  onSearch,
+  onClear,
+  onImageSearch,
+  imageSearching,
+  imagePreview,
+  onImageUpload,
+  detectionResults,
+}) {
   const [query, setQuery] = useState('');
+  const fileInputRef = useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (query.trim()) onSearch(query);
+    onSearch(query);
   };
 
   return (
@@ -211,7 +223,7 @@ function SearchSection({ liveAuctionCount, hasResults, onSearch, onClear }) {
               Find your next piece
             </h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-              Search by style, medium, subject, or price.
+              Search by style, medium, subject, price — or upload an image.
             </p>
           </div>
 
@@ -229,63 +241,155 @@ function SearchSection({ liveAuctionCount, hasResults, onSearch, onClear }) {
           )}
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-center rounded-full shadow-sm"
-          style={{
-            background: '#ffffff',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <div className="flex flex-1 items-center px-5 py-3">
-            <Search size={18} style={{ color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try: abstract under R2000, portrait charcoal, beige sculpture"
-              className="ml-3 flex-1 bg-transparent text-sm outline-none md:text-base"
-              style={{ color: 'var(--text-primary)' }}
-            />
-          </div>
+{/* Search + OR + Upload row */}
+<div className="flex flex-col gap-3 md:flex-row md:items-center">
+  {/* Text Search — half width */}
+<form
+  onSubmit={handleSubmit}
+  className="flex items-center md:w-210"
+  style={{
+    background: '#ffffff',
+    border: '1px solid #ffffff',
+    borderRadius: '0.5rem',
+  }}
+>
+  <Search size={16} className="ml-3 shrink-0" style={{ color: '#111111' }} />
+  <input
+    type="text"
+    value={query}
+    onChange={(e) => setQuery(e.target.value)}
+    placeholder="Try: abstract under R2000, portrait charcoal..."
+  className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+  style={{
+    color: '#111111',
+    background: '#ffffff',     
+    border: '1px solid #ffffff',  
+    borderRadius: '0.375rem',  
+    margin: '4px',             
+  }}
 
-          <button
-            type="submit"
-            className="mr-1.5 rounded-full px-6 py-2.5 text-sm font-semibold transition-all hover:brightness-110"
+  />
+  <button
+    type="submit"
+    className="m-1 rounded-md px-5 py-2 text-sm font-semibold transition-all hover:brightness-110 shrink-0"
+    style={{ background: '#a76b11', color: '#F5EFE6' }}
+  >
+    Search
+  </button>
+</form>
+
+  {/* OR divider */}
+  <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>or</span>
+
+  {/* Image Upload */}
+  <div className="flex items-center gap-2">
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      onChange={onImageUpload}
+      className="hidden"
+    />
+
+    <button
+      onClick={() => fileInputRef.current?.click()}
+      className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all hover:bg-white/50"
+      style={{
+        background: 'transparent',
+        borderColor: 'var(--border)',
+        color: 'var(--text-primary)',
+      }}
+      type="button"
+    >
+      <Upload size={14} />
+      Upload image
+    </button>
+
+    {imagePreview && (
+      <>
+        <img
+          src={imagePreview}
+          alt="Preview"
+          className="h-10 w-10 rounded-lg border object-cover"
+          style={{ borderColor: 'var(--border)' }}
+        />
+        <button
+          onClick={onImageSearch}
+          disabled={imageSearching}
+          className="rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-60"
+          style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+          type="button"
+        >
+          {imageSearching ? 'Searching…' : 'Find similar'}
+        </button>
+      </>
+    )}
+
+    {hasResults && (
+      <button
+        onClick={() => { setQuery(''); onClear(); }}
+        className="flex items-center gap-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors"
+        style={{
+          borderColor: 'var(--border)',
+          color: 'var(--text-muted)',
+          background: 'transparent',
+        }}
+        type="button"
+      >
+        <X size={14} />
+        Clear
+      </button>
+    )}
+  </div>
+</div>
+
+        {/* Detection Results */}
+        {detectionResults && (
+          <div
+            className="mt-4 rounded-xl border p-4"
             style={{
-              background: '#a76b11',
-              color: '#F5EFE6',
+              background: 'rgba(160,106,75,0.05)',
+              borderColor: 'var(--border)',
             }}
           >
-            Search
-          </button>
-        </form>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              Detected in image:
+            </p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {hasResults && (
-            <button
-              onClick={() => {
-                setQuery('');
-                onClear();
-              }}
-              className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-              style={{
-                borderColor: 'var(--border)',
-                color: 'var(--text-muted)',
-                background: 'transparent',
-              }}
-              type="button"
-            >
-              <X size={14} />
-              Clear search
-            </button>
-          )}
-        </div>
+            <div className="flex flex-wrap gap-2">
+              {(detectionResults.detectedLabels || []).slice(0, 5).map((label, i) => (
+                <span
+                  key={i}
+                  className="rounded-full border px-2.5 py-1 text-xs"
+                  style={{
+                    background: 'var(--surface)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  {label.description}
+                </span>
+              ))}
+
+              {(detectionResults.dominantColors || []).slice(0, 3).map((color, i) => (
+                <span
+                  key={i}
+                  className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                  style={{
+                    background: 'var(--clay)',
+                    color: '#F5EFE6',
+                  }}
+                >
+                  {color}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
 }
-
 function WhyChooseSection() {
   return (
     <section
@@ -338,6 +442,12 @@ export default function Home() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchResults, setSearchResults] = useState(null);
+
+  // Image search states
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageSearching, setImageSearching] = useState(false);
+  const [detectionResults, setDetectionResults] = useState(null);
 
   const [filterStyle, setFilterStyle] = useState('');
   const [filterMedium, setFilterMedium] = useState('');
@@ -395,7 +505,64 @@ export default function Home() {
     }
   };
 
-  const clearSearch = () => setSearchResults(null);
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageSearch = async () => {
+    if (!imageFile) return;
+
+    setImageSearching(true);
+    setSearchResults(null);
+    setDetectionResults(null);
+
+    try {
+      console.log('🔍 Starting image search with Gemini...');
+
+      const { success, results, analysis, error } = await searchArtworksByImage(imageFile, purchasableArtworks);
+
+      if (!success || error) {
+        console.error('❌ Image search failed:', error);
+        setSearchResults([]);
+        return;
+      }
+
+      console.log('✅ Image search results:', {
+        totalFound: results.length,
+        detectedLabels: analysis.detectedLabels,
+        dominantColors: analysis.dominantColors,
+        webEntities: analysis.webEntities,
+      });
+
+      if (analysis) {
+        console.log('🎨 Detected in image:');
+        console.log('  - Labels:', analysis.detectedLabels.map((l) => l.description).join(', '));
+        console.log('  - Colors:', analysis.dominantColors.join(', '));
+        console.log('  - Subjects:', analysis.webEntities.map((e) => e.description).join(', '));
+      }
+
+      setSearchResults(results.length > 0 ? results : []);
+      setDetectionResults(analysis);
+    } catch (err) {
+      console.error('❌ Image search error:', err);
+      setSearchResults([]);
+    } finally {
+      setImageSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchResults(null);
+    setImageFile(null);
+    setImagePreview(null);
+    setDetectionResults(null);
+  };
 
   const displayArtworks = applyFilters(searchResults ?? purchasableArtworks);
 
@@ -421,6 +588,11 @@ export default function Home() {
         hasResults={hasResults}
         onSearch={handleSearch}
         onClear={clearSearch}
+        onImageSearch={handleImageSearch}
+        imageSearching={imageSearching}
+        imagePreview={imagePreview}
+        onImageUpload={handleImageUpload}
+        detectionResults={detectionResults}
       />
 
       <main className="min-h-[75vh] flex items-center">
@@ -437,7 +609,7 @@ export default function Home() {
               <div className="mb-8 flex items-center justify-between">
                 <div>
                   <h2 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
-                    Search results
+                    {imageFile ? 'Image search results' : 'Search results'}
                   </h2>
                   <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                     {displayArtworks.length === 0
@@ -463,7 +635,7 @@ export default function Home() {
                     No results found
                   </h3>
                   <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-                    Try different keywords or remove filters.
+                    Try a different image or search term.
                   </p>
                 </div>
               ) : (
