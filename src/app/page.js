@@ -68,7 +68,7 @@ const features = [
   },
 ];
 
-
+// ─────────────────────────────────────────────────────────────────────────────
 function HeroSlideshow() {
   const [current, setCurrent] = useState(0);
 
@@ -123,22 +123,14 @@ function HeroSlideshow() {
               <Link
                 href="/artworks"
                 className="rounded-full px-7 py-3.5 text-sm font-semibold transition-all hover:brightness-110"
-                style={{
-                  background: 'var(--clay)',
-                  color: '#F5EFE6',
-                  boxShadow: 'var(--shadow-hero-btn)',
-                }}
+                style={{ background: 'var(--clay)', color: '#F5EFE6', boxShadow: 'var(--shadow-hero-btn)' }}
               >
                 Browse Artworks
               </Link>
-
               <Link
                 href="/auctions"
                 className="rounded-full border px-7 py-3.5 text-sm font-semibold transition-all hover:bg-white/10"
-                style={{
-                  borderColor: 'rgba(245, 239, 230, 0.25)',
-                  color: '#F5EFE6',
-                }}
+                style={{ borderColor: 'rgba(245, 239, 230, 0.25)', color: '#F5EFE6' }}
               >
                 View Auctions
               </Link>
@@ -150,24 +142,15 @@ function HeroSlideshow() {
       <button
         onClick={() => go(-1)}
         className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full border p-3 backdrop-blur-sm transition-all hover:bg-white/20 md:left-6"
-        style={{
-          background: 'rgba(245, 239, 230, 0.08)',
-          color: 'var(--background)',
-          borderColor: 'rgba(245, 239, 230, 0.15)',
-        }}
+        style={{ background: 'rgba(245, 239, 230, 0.08)', color: 'var(--background)', borderColor: 'rgba(245, 239, 230, 0.15)' }}
         aria-label="Previous slide"
       >
         <ChevronLeft size={20} />
       </button>
-
       <button
         onClick={() => go(1)}
         className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full border p-3 backdrop-blur-sm transition-all hover:bg-white/20 md:right-6"
-        style={{
-          background: 'rgba(245, 239, 230, 0.08)',
-          color: 'var(--background)',
-          borderColor: 'rgba(245, 239, 230, 0.15)',
-        }}
+        style={{ background: 'rgba(245, 239, 230, 0.08)', color: 'var(--background)', borderColor: 'rgba(245, 239, 230, 0.15)' }}
         aria-label="Next slide"
       >
         <ChevronRight size={20} />
@@ -191,6 +174,7 @@ function HeroSlideshow() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 function SearchSection({
   liveAuctionCount,
   hasResults,
@@ -200,10 +184,24 @@ function SearchSection({
   imageSearching,
   imagePreview,
   onImageUpload,
+  onImageRemove,   // ✅ new: lets parent know when image is cleared from here
   detectionResults,
+  imageSearchError,
 }) {
   const [query, setQuery] = useState('');
   const fileInputRef = useRef(null);
+
+  // ✅ Fix: when parent clears results, also reset the local query input
+  const handleClear = () => {
+    setQuery('');
+    onClear();
+  };
+
+  // ✅ Fix: remove image without clearing search results
+  const handleRemoveImage = () => {
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    onImageRemove();
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -213,10 +211,7 @@ function SearchSection({
   return (
     <section
       className="border-b py-10"
-      style={{
-        borderColor: 'var(--border)',
-        background: 'var(--surface)',
-      }}
+      style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
     >
       <div className="container">
         <div className="mb-6 flex items-start justify-between gap-6">
@@ -243,146 +238,150 @@ function SearchSection({
           )}
         </div>
 
-{/* Search + OR + Upload row */}
-<div className="flex flex-col gap-3 md:flex-row md:items-center">
-  {/* Text Search — half width */}
-<form
-  onSubmit={handleSubmit}
-  className="flex items-center md:w-210"
-  style={{
-    background: '#ffffff',
-    border: '1px solid #ffffff',
-    borderRadius: '0.5rem',
-  }}
->
-  <Search size={16} className="ml-3 shrink-0" style={{ color: '#111111' }} />
-  <input
-    type="text"
-    value={query}
-    onChange={(e) => setQuery(e.target.value)}
-    placeholder="Try: abstract under R2000, portrait charcoal..."
-  className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
-  style={{
-    color: '#111111',
-    background: '#ffffff',     
-    border: '1px solid #ffffff',  
-    borderRadius: '0.375rem',  
-    margin: '4px',             
-  }}
+        {/* Search row */}
+        <div className="flex flex-col gap-3 md:flex-row md:flex-nowrap md:items-center">
 
-  />
-  <button
-    type="submit"
-    className="m-1 rounded-md px-5 py-2 text-sm font-semibold transition-all hover:brightness-110 shrink-0"
-    style={{ background: '#a76b11', color: '#F5EFE6' }}
-  >
-    Search
-  </button>
-</form>
+          {/* Text search */}
+          <form
+            onSubmit={handleSubmit}
+            className="flex items-center md:w-[520px] shrink-0"
+            style={{ background: '#ffffff', border: '1px solid #ffffff', borderRadius: '0.75rem' }}
+          >
+            <Search size={16} className="ml-3 shrink-0" style={{ color: '#111111' }} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Try: abstract under R2000, portrait charcoal..."
+              className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
+              style={{ color: '#111111', background: '#ffffff', border: '1px solid #ffffff', borderRadius: '0.5rem', margin: '4px' }}
+            />
+            <button
+              type="submit"
+              className="m-1 rounded-lg px-5 py-2 text-sm font-semibold transition-all hover:brightness-110 shrink-0"
+              style={{ background: '#a76b11', color: '#F5EFE6' }}
+            >
+              Search
+            </button>
+          </form>
 
-  {/* OR divider */}
-  <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>or</span>
+          <span className="text-sm font-medium md:px-1" style={{ color: 'var(--text-muted)' }}>or</span>
 
-  {/* Image Upload */}
-  <div className="flex items-center gap-2">
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/*"
-      onChange={onImageUpload}
-      className="hidden"
-    />
+          {/* Image upload controls */}
+          <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
+            {/* ✅ Reset input value so the same file can be re-uploaded */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                onImageUpload(e);
+                // reset so same file can trigger onChange again if re-selected
+                e.target.value = '';
+              }}
+              className="hidden"
+            />
 
-    <button
-      onClick={() => fileInputRef.current?.click()}
-      className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all hover:bg-white/50"
-      style={{
-        background: 'transparent',
-        borderColor: 'var(--border)',
-        color: 'var(--text-primary)',
-      }}
-      type="button"
-    >
-      <Upload size={14} />
-      Upload image
-    </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-all hover:bg-white/50"
+              style={{ background: 'transparent', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+              type="button"
+            >
+              <Upload size={14} />
+              {imagePreview ? 'Change image' : 'Upload image'}
+            </button>
 
-    {imagePreview && (
-      <>
-        <img
-          src={imagePreview}
-          alt="Preview"
-          className="h-10 w-10 rounded-lg border object-cover"
-          style={{ borderColor: 'var(--border)' }}
-        />
-        <button
-          onClick={onImageSearch}
-          disabled={imageSearching}
-          className="rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-60"
-          style={{ background: 'var(--clay)', color: '#F5EFE6' }}
-          type="button"
-        >
-          {imageSearching ? 'Searching…' : 'Find similar'}
-        </button>
-      </>
-    )}
+            {imagePreview && (
+              <>
+                {/* Image thumbnail with remove button */}
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-10 w-10 rounded-lg border object-cover"
+                    style={{ borderColor: 'var(--border)' }}
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full text-white"
+                    style={{ background: 'rgba(0,0,0,0.6)', fontSize: 9 }}
+                    type="button"
+                    aria-label="Remove image"
+                  >
+                    ✕
+                  </button>
+                </div>
 
-    {hasResults && (
-      <button
-        onClick={() => { setQuery(''); onClear(); }}
-        className="flex items-center gap-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors"
-        style={{
-          borderColor: 'var(--border)',
-          color: 'var(--text-muted)',
-          background: 'transparent',
-        }}
-        type="button"
-      >
-        <X size={14} />
-        Clear
-      </button>
-    )}
-  </div>
-</div>
+                <button
+                  onClick={onImageSearch}
+                  disabled={imageSearching}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: 'var(--clay)', color: '#F5EFE6' }}
+                  type="button"
+                >
+                  {imageSearching ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white border-t-transparent" />
+                      Searching…
+                    </span>
+                  ) : 'Find similar'}
+                </button>
+              </>
+            )}
 
-        {/* Detection Results */}
-        {detectionResults && (
+            {hasResults && (
+              <button
+                onClick={handleClear}
+                className="flex items-center gap-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
+                type="button"
+              >
+                <X size={14} />
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ✅ HuggingFace cold-start notice while searching */}
+        {imageSearching && (
+          <p className="mt-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+            ⏳ First search may take ~10 seconds while the AI model warms up…
+          </p>
+        )}
+
+        {/* ✅ Error message if image search fails */}
+        {imageSearchError && (
           <div
-            className="mt-4 rounded-xl border p-4"
+            className="mt-4 rounded-xl border px-4 py-3 text-sm"
             style={{
-              background: 'rgba(160,106,75,0.05)',
-              borderColor: 'var(--border)',
+              background: 'rgba(190,58,38,0.08)',
+              borderColor: 'rgba(190,58,38,0.22)',
+              color: 'rgba(255,220,215,0.95)',
             }}
           >
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              Detected in image:
-            </p>
+            Image search failed: {imageSearchError}. Try a different image or use text search.
+          </div>
+        )}
 
+        {/* Top match chips */}
+        {detectionResults?.topMatches?.length > 0 && (
+          <div
+            className="mt-4 rounded-xl border p-4"
+            style={{ background: 'rgba(160,106,75,0.05)', borderColor: 'var(--border)' }}
+          >
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              Closest matches:
+            </p>
             <div className="flex flex-wrap gap-2">
-              {(detectionResults.detectedLabels || []).slice(0, 5).map((label, i) => (
+              {detectionResults.topMatches.slice(0, 5).map((m, i) => (
                 <span
                   key={i}
                   className="rounded-full border px-2.5 py-1 text-xs"
-                  style={{
-                    background: 'var(--surface)',
-                    borderColor: 'var(--border)',
-                    color: 'var(--text-muted)',
-                  }}
+                  style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                 >
-                  {label.description}
-                </span>
-              ))}
-
-              {(detectionResults.dominantColors || []).slice(0, 3).map((color, i) => (
-                <span
-                  key={i}
-                  className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                  style={{
-                    background: 'var(--clay)',
-                    color: '#F5EFE6',
-                  }}
-                >
-                  {color}
+                  {m.title} — {m.score}
                 </span>
               ))}
             </div>
@@ -392,14 +391,13 @@ function SearchSection({
     </section>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 function WhyChooseSection() {
   return (
     <section
       className="min-h-[75vh] flex items-center border-t"
-      style={{
-        borderColor: 'var(--border)',
-        background: 'rgba(232, 216, 195, 0.35)',
-      }}
+      style={{ borderColor: 'var(--border)', background: 'rgba(232, 216, 195, 0.35)' }}
     >
       <div className="container w-full py-6">
         <h2 className="font-display text-3xl font-black md:text-4xl" style={{ color: 'var(--text-primary)' }}>
@@ -408,29 +406,19 @@ function WhyChooseSection() {
         <p className="mt-2 max-w-lg text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
           Built for discovery, collecting, and live auctions — without gatekeeping.
         </p>
-
         <div className="mt-12 grid gap-8 md:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}
               className="rounded-xl border p-8 transition-shadow duration-300 hover:shadow-lg"
-              style={{
-                borderColor: 'var(--border)',
-                background: 'rgba(245, 239, 230, 0.70)',
-              }}
+              style={{ borderColor: 'var(--border)', background: 'rgba(245, 239, 230, 0.70)' }}
             >
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(24, 74, 61, 0.1)' }}>
                 <f.icon size={22} style={{ color: 'rgba(8, 8, 8, 0.7)' }} />
               </div>
-              <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {f.title}
-              </h3>
-              <p className="mt-1 text-sm font-semibold" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>
-                {f.tagline}
-              </p>
-              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>
-                {f.description}
-              </p>
+              <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{f.title}</h3>
+              <p className="mt-1 text-sm font-semibold" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>{f.tagline}</p>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>{f.description}</p>
             </div>
           ))}
         </div>
@@ -439,18 +427,19 @@ function WhyChooseSection() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
-
   const { addToCart } = useCart();
   const [artworks, setArtworks] = useState([]);
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchResults, setSearchResults] = useState(null);
 
-  // Image search states
+  // Image search state
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageSearching, setImageSearching] = useState(false);
+  const [imageSearchError, setImageSearchError] = useState(null); // ✅ new
   const [detectionResults, setDetectionResults] = useState(null);
 
   const [filterStyle, setFilterStyle] = useState('');
@@ -494,78 +483,74 @@ export default function Home() {
 
   const handleSearch = async (query) => {
     const q = (query || '').trim();
-    if (!q) {
-      setSearchResults(null);
-      return;
-    }
+    if (!q) { setSearchResults(null); return; }
 
     const { results, useBasicSearch } = await parseSearchWithAI(q, purchasableArtworks);
-
     if (useBasicSearch) {
-      const basicResults = basicKeywordSearch(q, purchasableArtworks);
-      setSearchResults(basicResults);
+      setSearchResults(basicKeywordSearch(q, purchasableArtworks));
     } else {
       setSearchResults(results);
     }
   };
 
+  // ✅ File chosen — store file + preview, don't trigger search yet
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setImageFile(file);
+    setImageSearchError(null);
     const reader = new FileReader();
     reader.onload = (ev) => setImagePreview(ev.target.result);
     reader.readAsDataURL(file);
   };
 
+  // ✅ Remove image without clearing search results
+  const handleImageRemove = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageSearchError(null);
+    setDetectionResults(null);
+  };
+
+  // ✅ "Find similar" clicked — run the actual search
   const handleImageSearch = async () => {
     if (!imageFile) return;
 
     setImageSearching(true);
     setSearchResults(null);
     setDetectionResults(null);
+    setImageSearchError(null);
 
     try {
-      console.log('🔍 Starting image search with Gemini...');
-
-      const { success, results, analysis, error } = await searchArtworksByImage(imageFile, purchasableArtworks);
+      const { success, results, analysis, error } = await searchArtworksByImage(
+        imageFile,
+        purchasableArtworks
+      );
 
       if (!success || error) {
-        console.error('❌ Image search failed:', error);
+        setImageSearchError(error || 'Unknown error');
         setSearchResults([]);
         return;
       }
 
-      console.log('✅ Image search results:', {
-        totalFound: results.length,
-        detectedLabels: analysis.detectedLabels,
-        dominantColors: analysis.dominantColors,
-        webEntities: analysis.webEntities,
-      });
-
-      if (analysis) {
-        console.log('🎨 Detected in image:');
-        console.log('  - Labels:', analysis.detectedLabels.map((l) => l.description).join(', '));
-        console.log('  - Colors:', analysis.dominantColors.join(', '));
-        console.log('  - Subjects:', analysis.webEntities.map((e) => e.description).join(', '));
-      }
-
-      setSearchResults(results.length > 0 ? results : []);
-      setDetectionResults(analysis);
+      setSearchResults(results);
+      setDetectionResults(analysis || null);
     } catch (err) {
-      console.error('❌ Image search error:', err);
+      console.error('Image search error:', err);
+      setImageSearchError(err.message);
       setSearchResults([]);
     } finally {
       setImageSearching(false);
     }
   };
 
+  // ✅ Clear everything — search results, image, error
   const clearSearch = () => {
     setSearchResults(null);
     setImageFile(null);
     setImagePreview(null);
     setDetectionResults(null);
+    setImageSearchError(null);
   };
 
   const displayArtworks = applyFilters(searchResults ?? purchasableArtworks);
@@ -596,7 +581,9 @@ export default function Home() {
         imageSearching={imageSearching}
         imagePreview={imagePreview}
         onImageUpload={handleImageUpload}
+        onImageRemove={handleImageRemove}
         detectionResults={detectionResults}
+        imageSearchError={imageSearchError}
       />
 
       <main className="min-h-[75vh] flex items-center">
@@ -621,7 +608,6 @@ export default function Home() {
                       : `${displayArtworks.length} artwork${displayArtworks.length === 1 ? '' : 's'} found`}
                   </p>
                 </div>
-
                 <button
                   onClick={clearSearch}
                   className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
@@ -645,7 +631,12 @@ export default function Home() {
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {displayArtworks.map((artwork) => (
-                    <ArtworkCard key={artwork.id} artwork={artwork} auction={getAuctionForArtwork(artwork.id)} />
+                    <ArtworkCard
+                      key={artwork.id}
+                      artwork={artwork}
+                      auction={getAuctionForArtwork(artwork.id)}
+                      onAddToCart={addToCart}
+                    />
                   ))}
                 </div>
               )}
@@ -661,7 +652,6 @@ export default function Home() {
                     Curated pieces available for purchase
                   </p>
                 </div>
-
                 <Link
                   href="/artworks"
                   className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
@@ -673,15 +663,14 @@ export default function Home() {
               </div>
 
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                
-{featuredArtworks.map((artwork) => (
-  <ArtworkCard
-    key={artwork.id}
-    artwork={artwork}
-    auction={getAuctionForArtwork(artwork.id)}
-    onAddToCart={addToCart}
-  />
-))}
+                {featuredArtworks.map((artwork) => (
+                  <ArtworkCard
+                    key={artwork.id}
+                    artwork={artwork}
+                    auction={getAuctionForArtwork(artwork.id)}
+                    onAddToCart={addToCart}
+                  />
+                ))}
               </div>
             </section>
           )}

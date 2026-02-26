@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { NotificationProvider } from '@/context/NotificationContext';
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import NavbarWrapper from "@/components/NavbarWrapper";
@@ -16,11 +17,13 @@ export default function RootLayout({ children }) {
       <body className="flex flex-col min-h-screen">
         <AuthProvider>
           <CartProvider>
-            <NavbarWrapper />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
+            <NotificationProvider>
+              <NavbarWrapper />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+            </NotificationProvider>
           </CartProvider>
         </AuthProvider>
       </body>

@@ -59,7 +59,7 @@ export default function AuctionCheckoutPage() {
 
       // Already paid
       if (auctionData.paymentStatus === 'paid') {
-        router.push(`/order-confirmation?orderId=${auctionData.orderId}`);
+        router.push(`/orderConfirmation?orderId=${auctionData.orderId}`);
         return;
       }
 
@@ -121,7 +121,7 @@ export default function AuctionCheckoutPage() {
         orderId,
       });
 
-      router.push(`/order-confirmation?orderId=${orderId}`);
+      router.push(`/orderConfirmation?orderId=${orderId}`);
     } catch (err) {
       console.error('Error placing auction order:', err);
       setError('Failed to place order. Please try again.');

@@ -1,73 +1,79 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const CartContext = createContext({});
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  // Load cart from localStorage on mount
+  // ✅ FIX 1: Listen to auth state changes.
+  // On login  → load that user's saved cart from localStorage.
+  // On logout → wipe cart from memory so it shows empty immediately.
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
-    }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const uid = firebaseUser.uid;
+        setCurrentUserId(uid);
+        try {
+          const saved = localStorage.getItem(`cart_${uid}`);
+          setCart(saved ? JSON.parse(saved) : []);
+        } catch {
+          setCart([]);
+        }
+      } else {
+        // Logged out — clear memory only, storage is kept for next login
+        setCurrentUserId(null);
+        setCart([]);
+      }
+      setCartLoaded(true);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Save cart to localStorage whenever it changes
+  // Persist cart to localStorage, keyed per user so carts never bleed across accounts
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+    if (!cartLoaded || !currentUserId) return;
+    try {
+      localStorage.setItem(`cart_${currentUserId}`, JSON.stringify(cart));
+    } catch (error) {
+      console.error('Error saving cart:', error);
+    }
+  }, [cart, cartLoaded, currentUserId]);
 
-  // Add item to cart
   const addToCart = (artwork) => {
-    setCart(prevCart => {
-      // Check if item already in cart
-      const existingItem = prevCart.find(item => item.id === artwork.id);
-      
-      if (existingItem) {
-        // Item already in cart - just return existing cart
+    setCart((prev) => {
+      if (prev.find((item) => item.id === artwork.id)) {
         alert('This artwork is already in your cart');
-        return prevCart;
+        return prev;
       }
-      
-      // Add new item (artworks are unique, quantity is always 1)
-      return [...prevCart, { ...artwork, quantity: 1 }];
+      if (artwork.status !== 'available') {
+        alert('This artwork is no longer available');
+        return prev;
+      }
+      return [...prev, { ...artwork, quantity: 1 }];
     });
   };
 
-  // Remove item from cart
-  const removeFromCart = (artworkId) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== artworkId));
-  };
+  const removeFromCart = (artworkId) =>
+    setCart((prev) => prev.filter((item) => item.id !== artworkId));
 
-  // Clear entire cart
-  const clearCart = () => {
-    setCart([]);
-  };
+  const clearCart = () => setCart([]);
 
-  // Get cart total
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.price || 0), 0);
-  };
+  const getCartTotal = () =>
+    cart.reduce((total, item) => total + (item.price || 0), 0);
 
-  // Get cart item count
-  const getCartCount = () => {
-    return cart.length;
-  };
-
-  const value = {
-    cart,
-    addToCart,
-    removeFromCart,
-    clearCart,
-    getCartTotal,
-    getCartCount,
-  };
+  const getCartCount = () => cart.length;
 
   return (
-    <CartContext.Provider value={value}>
+    <CartContext.Provider
+      value={{ cart, cartLoaded, addToCart, removeFromCart, clearCart, getCartTotal, getCartCount }}
+    >
       {children}
     </CartContext.Provider>
   );
@@ -75,8 +81,6 @@ export function CartProvider({ children }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within CartProvider');
-  }
+  if (context === undefined) throw new Error('useCart must be used within CartProvider');
   return context;
 }

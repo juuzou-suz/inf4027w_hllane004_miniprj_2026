@@ -34,7 +34,6 @@ export default function AdminLayout({ children }) {
     { href: '/admin/artworks', label: 'Artworks' },
     { href: '/admin/auctions', label: 'Auctions' },
     { href: '/admin/orders', label: 'Orders' },
-    { href: '/admin/reports', label: 'Reports' },
   ];
 
   return (

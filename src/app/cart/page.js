@@ -1,34 +1,53 @@
 'use client';
 
+import { useEffect, useState, useRef } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function CartPage() {
-  const { cart, removeFromCart, clearCart, getCartTotal } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { cart, removeFromCart, getCartTotal, clearCart, cartLoaded } = useCart();
   const router = useRouter();
+  const [placing, setPlacing] = useState(false);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-ZA', {
+  // ✅ Track whether the cart had items when the page first loaded.
+  // If it was already empty on arrival → redirect to /artworks.
+  // If the user empties it themselves → stay and show the empty cart UI.
+  const cartHadItemsOnLoad = useRef(null);
+
+  useEffect(() => {
+    if (authLoading || !cartLoaded) return;
+    if (!user) { router.push('/login?redirect=/cart'); return; }
+
+    // First time we have a definitive cart state, record it
+    if (cartHadItemsOnLoad.current === null) {
+      cartHadItemsOnLoad.current = cart.length > 0;
+      // If it was already empty when they arrived, redirect away
+      if (cart.length === 0 && !placing) {
+        router.push('/artworks');
+      }
+    }
+    // After that, never redirect — let the empty cart UI show naturally
+  }, [cart, cartLoaded, authLoading, user, placing, router]);
+
+  const formatPrice = (price) =>
+    new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
       minimumFractionDigits: 0,
     }).format(price);
-  };
 
   const handleCheckout = () => {
-    if (!user) {
-      router.push('/login?redirect=/cart');
-      return;
-    }
+    if (!user) { router.push('/login?redirect=/cart'); return; }
     router.push('/checkout');
   };
 
   return (
     <div className="min-h-screen bg-background py-12 text-foreground">
       <div className="container max-w-4xl">
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="font-display text-4xl font-black mb-2">Your Cart</h1>
@@ -39,7 +58,7 @@ export default function CartPage() {
           </p>
         </div>
 
-        {/* Empty Cart */}
+        {/* Empty state */}
         {cart.length === 0 && (
           <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-lg">
             <div className="text-7xl mb-6">🛒</div>
@@ -57,17 +76,17 @@ export default function CartPage() {
           </div>
         )}
 
-        {/* Cart Items */}
+        {/* Cart items */}
         {cart.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Items List */}
+
+            {/* Items list */}
             <div className="lg:col-span-2 space-y-4">
               {cart.map((item) => (
                 <div
                   key={item.id}
                   className="rounded-2xl border border-border bg-card overflow-hidden flex shadow-lg"
                 >
-                  {/* Artwork Image */}
                   <div className="w-28 sm:w-32 h-28 sm:h-32 flex-shrink-0">
                     <img
                       src={item.imageUrl || 'https://via.placeholder.com/200x200?text=No+Image'}
@@ -76,7 +95,6 @@ export default function CartPage() {
                     />
                   </div>
 
-                  {/* Item Details */}
                   <div className="flex-1 p-4 flex flex-col justify-between">
                     <div>
                       <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
@@ -90,7 +108,6 @@ export default function CartPage() {
                       <span className="font-display text-xl font-black text-primary">
                         {formatPrice(item.price)}
                       </span>
-
                       <button
                         onClick={() => removeFromCart(item.id)}
                         className="text-sm font-medium transition flex items-center gap-1
@@ -98,12 +115,8 @@ export default function CartPage() {
                         aria-label={`Remove ${item.title} from cart`}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                         Remove
                       </button>
@@ -112,12 +125,9 @@ export default function CartPage() {
                 </div>
               ))}
 
-              {/* Clear Cart */}
               <button
                 onClick={() => {
-                  if (confirm('Are you sure you want to clear your cart?')) {
-                    clearCart();
-                  }
+                  if (confirm('Are you sure you want to clear your cart?')) clearCart();
                 }}
                 className="text-sm font-medium transition
                            text-[rgba(255,170,170,0.95)] hover:text-[rgba(255,120,120,0.95)]"
@@ -126,12 +136,11 @@ export default function CartPage() {
               </button>
             </div>
 
-            {/* Order Summary */}
+            {/* Order summary */}
             <div className="lg:col-span-1">
               <div className="rounded-2xl border border-border bg-card p-6 sticky top-6 shadow-lg">
                 <h2 className="text-xl font-bold mb-6">Order Summary</h2>
 
-                {/* Item List */}
                 <div className="space-y-3 mb-6">
                   {cart.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm gap-3">
@@ -143,7 +152,6 @@ export default function CartPage() {
                   ))}
                 </div>
 
-                {/* Divider */}
                 <div className="border-t border-border pt-4 mb-6">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-foreground">Total</span>
@@ -153,7 +161,6 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Guest notice */}
                 {!user && (
                   <div className="rounded-xl border border-[rgba(255,200,120,0.35)] bg-[rgba(255,200,120,0.12)] p-3 mb-4">
                     <p className="text-sm text-[rgba(255,235,205,0.95)]">
@@ -162,7 +169,6 @@ export default function CartPage() {
                   </div>
                 )}
 
-                {/* Checkout Button */}
                 <button
                   onClick={handleCheckout}
                   className="w-full rounded-full py-4 font-semibold text-base transition
@@ -171,11 +177,9 @@ export default function CartPage() {
                   {user ? 'Proceed to Checkout' : 'Log In to Checkout'}
                 </button>
 
-                {/* Continue Shopping */}
                 <Link
                   href="/artworks"
-                  className="block text-center font-medium mt-4 transition
-                             text-primary hover:opacity-80"
+                  className="block text-center font-medium mt-4 transition text-primary hover:opacity-80"
                 >
                   ← Continue Shopping
                 </Link>
@@ -183,6 +187,7 @@ export default function CartPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

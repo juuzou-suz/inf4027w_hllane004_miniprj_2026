@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+
 import { getAllArtworks, deleteArtwork } from '@/lib/firestore';
+import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function AdminArtworksPage() {
   const [artworks, setArtworks] = useState([]);
@@ -19,6 +22,29 @@ export default function AdminArtworksPage() {
     try {
       setLoading(true);
       const data = await getAllArtworks();
+
+      // Auto-fix stale sold statuses by cross-checking against orders
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const soldArtworkIds = new Set();
+      ordersSnap.docs.forEach((orderDoc) => {
+        const items = orderDoc.data().items || [];
+        items.forEach((item) => {
+          if (item.artworkId) soldArtworkIds.add(item.artworkId);
+        });
+      });
+
+      const batch = writeBatch(db);
+      let resetCount = 0;
+      data.forEach((artwork) => {
+        if (artwork.status === 'sold' && !soldArtworkIds.has(artwork.id)) {
+          batch.update(doc(db, 'artworks', artwork.id), { status: 'available' });
+          artwork.status = 'available'; // update local copy immediately
+          resetCount++;
+        }
+      });
+
+      if (resetCount > 0) await batch.commit();
+
       setArtworks(data);
       setError('');
     } catch (err) {
