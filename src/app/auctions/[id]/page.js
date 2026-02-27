@@ -34,21 +34,20 @@ export default function AuctionDetailPage() {
   const [error, setError] = useState('');
   const [bidAmount, setBidAmount] = useState('');
 
-  // Compute the REAL status from timestamps, not what's stored in Firestore
-const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState(new Date());
 
-useEffect(() => {
-  const interval = setInterval(() => setNow(new Date()), 1000);
-  return () => clearInterval(interval);
-}, []);
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-const realStatus = useMemo(() => {
-  if (!auction) return null;
-  return getAuctionStatus(auction);
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [auction, now]); // now ticks every second, forcing recompute
+  const realStatus = useMemo(() => {
+    if (!auction) return null;
+    // If auction is cancelled, always return cancelled
+    if (auction.status === 'cancelled') return 'cancelled';
+    return getAuctionStatus(auction);
+  }, [auction, now]);
 
-  // Fetch initial auction + artwork
   useEffect(() => {
     if (!auctionId) return;
 
@@ -76,7 +75,6 @@ const realStatus = useMemo(() => {
     fetchData();
   }, [auctionId]);
 
-  // Real-time auction listener
   useEffect(() => {
     if (!auctionId) return;
     const unsubscribe = onSnapshot(doc(db, 'auctions', auctionId), (snap) => {
@@ -85,7 +83,6 @@ const realStatus = useMemo(() => {
     return () => unsubscribe();
   }, [auctionId]);
 
-  // Real-time bids listener
   useEffect(() => {
     if (!auctionId) return;
     const bidsQuery = query(
@@ -99,14 +96,14 @@ const realStatus = useMemo(() => {
     return () => unsubscribe();
   }, [auctionId]);
 
-  // Update Firestore status when realStatus changes and differs from stored status
   useEffect(() => {
     if (!auction || !auctionId || !realStatus) return;
+    // Don't update if already cancelled
+    if (auction.status === 'cancelled') return;
     if (realStatus === auction.status) return;
 
     updateDoc(doc(db, 'auctions', auctionId), { status: realStatus }).catch(console.error);
 
-    // If auction just ended, write the winner
     if (realStatus === 'ended' && auction.currentBidderId && !auction.winnerId) {
       updateDoc(doc(db, 'auctions', auctionId), {
         status: 'ended',
@@ -131,36 +128,75 @@ const realStatus = useMemo(() => {
   };
 
   const timeRemaining = useMemo(() => {
-  if (!auction?.endTime) return 'N/A';
-  const end = new Date(auction.endTime);
-  const diff = end - now;
-  if (diff <= 0) return 'Ended';
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  return `${hours}h ${minutes}m ${seconds}s`;
-}, [auction?.endTime, now]);
+    if (!auction?.endTime) return 'N/A';
+    const end = new Date(auction.endTime);
+    const diff = end - now;
+    if (diff <= 0) return 'Ended';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }, [auction?.endTime, now]);
+
   const statusBadge = useMemo(() => {
     const base = 'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold';
 
     if (!realStatus) return <span className={base + ' border-border text-muted-foreground'}>Status</span>;
 
+    if (realStatus === 'cancelled') {
+      return (
+        <span
+          className={base}
+          style={{
+            borderColor: 'rgba(255,120,120,0.25)',
+            background: 'rgba(190,58,38,0.12)',
+            color: 'rgba(255,180,180,0.95)',
+          }}
+        >
+          ❌ Cancelled
+        </span>
+      );
+    }
+
     if (realStatus === 'live') {
       return (
-        <span className={base} style={{ borderColor: 'rgba(255,120,120,0.30)', background: 'rgba(190,58,38,0.18)', color: 'rgba(255,225,225,0.95)' }}>
+        <span
+          className={base}
+          style={{
+            borderColor: 'rgba(255,120,120,0.30)',
+            background: 'rgba(190,58,38,0.18)',
+            color: 'rgba(255,225,225,0.95)',
+          }}
+        >
           🔴 Live
         </span>
       );
     }
+
     if (realStatus === 'upcoming') {
       return (
-        <span className={base} style={{ borderColor: 'rgba(255,200,120,0.28)', background: 'rgba(255,200,120,0.14)', color: 'rgba(255,235,205,0.95)' }}>
+        <span
+          className={base}
+          style={{
+            borderColor: 'rgba(255,200,120,0.28)',
+            background: 'rgba(255,200,120,0.14)',
+            color: 'rgba(255,235,205,0.95)',
+          }}
+        >
           📅 Upcoming
         </span>
       );
     }
+
     return (
-      <span className={base} style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: 'rgba(245,239,230,0.90)' }}>
+      <span
+        className={base}
+        style={{
+          borderColor: 'rgba(255,255,255,0.12)',
+          background: 'rgba(255,255,255,0.06)',
+          color: 'rgba(245,239,230,0.90)',
+        }}
+      >
         ⏹️ Ended
       </span>
     );
@@ -253,7 +289,10 @@ const realStatus = useMemo(() => {
         <div className="container">
           <div className="rounded-2xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.14)] p-8 text-center">
             <h2 className="font-display text-2xl font-black text-[rgba(255,225,225,0.95)]">{error}</h2>
-            <Link href="/auctions" className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110 bg-primary text-primary-foreground">
+            <Link
+              href="/auctions"
+              className="mt-6 inline-block rounded-full px-6 py-3 text-sm font-semibold transition-all hover:brightness-110 bg-primary text-primary-foreground"
+            >
               Back to auctions
             </Link>
           </div>
@@ -264,6 +303,7 @@ const realStatus = useMemo(() => {
 
   const minBid = (auction?.currentBid || 0) + (auction?.minimumIncrement || 0);
   const isEnded = realStatus === 'ended';
+  const isCancelled = realStatus === 'cancelled';
   const winnerId = auction?.winnerId || (isEnded ? auction?.currentBidderId : null);
   const winnerEmail = auction?.winnerEmail || auction?.currentBidderEmail || null;
   const isWinner = user && winnerId === user.uid;
@@ -271,12 +311,13 @@ const realStatus = useMemo(() => {
   return (
     <div className="min-h-screen bg-background py-10 text-foreground">
       <div className="container">
-        {/* Back */}
         <button
           onClick={() => router.back()}
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold transition-colors hover:opacity-80 text-muted-foreground"
         >
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card">←</span>
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card">
+            ←
+          </span>
           Back
         </button>
 
@@ -306,14 +347,18 @@ const realStatus = useMemo(() => {
                   <MiniStat label="Style" value={artwork.style || '—'} />
                   <MiniStat label="Medium" value={artwork.medium || '—'} />
                   {artwork.dimensions && (
-                    <MiniStat label="Size" value={`${artwork.dimensions.width} × ${artwork.dimensions.height} cm`} full />
+                    <MiniStat
+                      label="Size"
+                      value={`${artwork.dimensions.width} × ${artwork.dimensions.height} cm`}
+                      full
+                    />
                   )}
                 </div>
               </div>
             )}
 
             {/* Winner banner */}
-            {isEnded && winnerId && (
+            {isEnded && !isCancelled && winnerId && (
               <div
                 className="rounded-2xl border p-6"
                 style={{ borderColor: 'rgba(160,106,75,0.45)', background: 'rgba(160,106,75,0.10)' }}
@@ -331,7 +376,7 @@ const realStatus = useMemo(() => {
             )}
 
             {/* Ended with no bids */}
-            {isEnded && !winnerId && (
+            {isEnded && !isCancelled && !winnerId && (
               <div
                 className="rounded-2xl border p-6"
                 style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}
@@ -344,15 +389,28 @@ const realStatus = useMemo(() => {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
               <div className="flex items-end justify-between gap-4">
                 <h3 className="font-display text-xl font-black">Bid history</h3>
-                <span className="text-xs text-muted-foreground">{bids.length} bid{bids.length === 1 ? '' : 's'}</span>
+                <span className="text-xs text-muted-foreground">
+                  {bids.length} bid{bids.length === 1 ? '' : 's'}
+                </span>
               </div>
+
+              {isCancelled && bids.length > 0 && (
+                <div className="mt-4 rounded-xl border p-3" style={{
+                  borderColor: 'rgba(255,120,120,0.25)',
+                  background: 'rgba(190,58,38,0.08)'
+                }}>
+                  <p className="text-xs" style={{ color: 'rgba(255,180,180,0.95)' }}>
+                    ⚠️ All bids have been voided due to auction cancellation
+                  </p>
+                </div>
+              )}
 
               {bids.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">No bids yet. Be the first to bid.</p>
               ) : (
                 <div className="mt-4 space-y-3 max-h-96 overflow-y-auto pr-1">
                   {bids.map((bid, index) => {
-                    const isTop = index === 0;
+                    const isTop = index === 0 && !isCancelled;
                     return (
                       <div
                         key={bid.id}
@@ -360,6 +418,7 @@ const realStatus = useMemo(() => {
                         style={{
                           borderColor: isTop ? 'rgba(160,106,75,0.45)' : 'rgba(255,255,255,0.10)',
                           background: isTop ? 'rgba(160,106,75,0.10)' : 'rgba(255,255,255,0.04)',
+                          opacity: isCancelled ? 0.5 : 1,
                         }}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -376,6 +435,18 @@ const realStatus = useMemo(() => {
                                   }}
                                 >
                                   {isEnded ? 'Winning bid' : 'Current highest'}
+                                </span>
+                              )}
+                              {isCancelled && index === 0 && (
+                                <span
+                                  className="ml-2 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                                  style={{
+                                    borderColor: 'rgba(255,120,120,0.25)',
+                                    background: 'rgba(190,58,38,0.12)',
+                                    color: 'rgba(255,180,180,0.95)',
+                                  }}
+                                >
+                                  Voided
                                 </span>
                               )}
                             </div>
@@ -404,7 +475,7 @@ const realStatus = useMemo(() => {
               {/* Current / final bid */}
               <div className="mt-5">
                 <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                  {isEnded ? 'Final bid' : 'Current bid'}
+                  {isCancelled ? 'Last bid (voided)' : isEnded ? 'Final bid' : 'Current bid'}
                 </div>
                 <div className="mt-1 font-display text-3xl font-black text-foreground">
                   {formatPrice(auction?.currentBid)}
@@ -433,6 +504,21 @@ const realStatus = useMemo(() => {
 
               {/* Bid panel */}
               <div className="mt-6">
+                {/* CANCELLED */}
+                {isCancelled && (
+                  <div
+                    className="rounded-2xl border p-4 text-center"
+                    style={{ borderColor: 'rgba(255,120,120,0.25)', background: 'rgba(190,58,38,0.12)' }}
+                  >
+                    <p className="text-sm font-semibold" style={{ color: 'rgba(255,180,180,0.95)' }}>
+                      ❌ Auction Cancelled
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      This auction is no longer accepting bids
+                    </p>
+                  </div>
+                )}
+
                 {/* LIVE */}
                 {realStatus === 'live' && (
                   <>
@@ -484,14 +570,12 @@ const realStatus = useMemo(() => {
                     style={{ borderColor: 'rgba(255,200,120,0.28)', background: 'rgba(255,200,120,0.14)' }}
                   >
                     <p className="text-sm font-semibold text-foreground">Auction starts</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {new Date(auction.startTime).toLocaleString('en-ZA')}
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{new Date(auction.startTime).toLocaleString('en-ZA')}</p>
                   </div>
                 )}
 
                 {/* ENDED */}
-                {isEnded && (
+                {isEnded && !isCancelled && (
                   <div
                     className="rounded-2xl border p-4 text-center"
                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)' }}

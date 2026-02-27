@@ -13,11 +13,11 @@ import {
   Gavel,
   Upload,
 } from 'lucide-react';
-import { searchArtworksByImage } from '@/lib/imageSearch';
 import { useCart } from '@/context/CartContext';
 import ArtworkCard from '@/components/artworkCard';
 import { getAllArtworks, getAllAuctions } from '@/lib/firestore';
 import { parseSearchWithAI, basicKeywordSearch } from '@/lib/aiSearch';
+import { searchArtworksByImage } from '@/lib/imageSearch';
 
 const slides = [
   {
@@ -184,20 +184,27 @@ function SearchSection({
   imageSearching,
   imagePreview,
   onImageUpload,
-  onImageRemove,   // ✅ new: lets parent know when image is cleared from here
+  onImageRemove,
   detectionResults,
   imageSearchError,
+  styles,
+  mediums,
+  filterStyle,
+  filterMedium,
+  filterMaxPrice,
+  onFilterStyle,
+  onFilterMedium,
+  onFilterMaxPrice,
+  onClearFilters,
 }) {
   const [query, setQuery] = useState('');
   const fileInputRef = useRef(null);
 
-  // ✅ Fix: when parent clears results, also reset the local query input
   const handleClear = () => {
     setQuery('');
     onClear();
   };
 
-  // ✅ Fix: remove image without clearing search results
   const handleRemoveImage = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
     onImageRemove();
@@ -207,6 +214,8 @@ function SearchSection({
     e.preventDefault();
     onSearch(query);
   };
+
+  const hasActiveFilters = filterStyle || filterMedium || filterMaxPrice;
 
   return (
     <section
@@ -238,7 +247,7 @@ function SearchSection({
           )}
         </div>
 
-        {/* Search row */}
+        {/* Row 1: Text search + image upload */}
         <div className="flex flex-col gap-3 md:flex-row md:flex-nowrap md:items-center">
 
           {/* Text search */}
@@ -269,14 +278,12 @@ function SearchSection({
 
           {/* Image upload controls */}
           <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
-            {/* ✅ Reset input value so the same file can be re-uploaded */}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={(e) => {
                 onImageUpload(e);
-                // reset so same file can trigger onChange again if re-selected
                 e.target.value = '';
               }}
               className="hidden"
@@ -294,7 +301,6 @@ function SearchSection({
 
             {imagePreview && (
               <>
-                {/* Image thumbnail with remove button */}
                 <div className="relative">
                   <img
                     src={imagePreview}
@@ -330,7 +336,7 @@ function SearchSection({
               </>
             )}
 
-            {hasResults && (
+            {(hasResults || hasActiveFilters) && (
               <button
                 onClick={handleClear}
                 className="flex items-center gap-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors"
@@ -344,14 +350,50 @@ function SearchSection({
           </div>
         </div>
 
-        {/* ✅ HuggingFace cold-start notice while searching */}
-        {imageSearching && (
-          <p className="mt-3 text-xs" style={{ color: 'var(--text-muted)' }}>
-            ⏳ First search may take ~10 seconds while the AI model warms up…
-          </p>
-        )}
+        {/* Row 2: Filters — only visible after a search has been performed */}
+        {hasResults && <div className="mt-4 flex flex-wrap items-center gap-2">
+          <select
+            value={filterStyle}
+            onChange={(e) => onFilterStyle(e.target.value)}
+            className="h-[38px] rounded-lg border px-3 text-sm outline-none"
+            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
+          >
+            <option value="">All styles</option>
+            {styles.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
 
-        {/* ✅ Error message if image search fails */}
+          <select
+            value={filterMedium}
+            onChange={(e) => onFilterMedium(e.target.value)}
+            className="h-[38px] rounded-lg border px-3 text-sm outline-none"
+            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
+          >
+            <option value="">All mediums</option>
+            {mediums.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+
+          <input
+            type="number"
+            value={filterMaxPrice}
+            onChange={(e) => onFilterMaxPrice(e.target.value)}
+            placeholder="Max ZAR"
+            className="h-[38px] w-28 rounded-lg border px-3 text-sm outline-none"
+            style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
+          />
+
+          {hasActiveFilters && (
+            <button
+              onClick={onClearFilters}
+              className="h-[38px] rounded-lg px-3 text-xs font-semibold"
+              style={{ color: 'var(--clay)' }}
+              type="button"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>}
+
+        {/* Error message */}
         {imageSearchError && (
           <div
             className="mt-4 rounded-xl border px-4 py-3 text-sm"
@@ -365,26 +407,31 @@ function SearchSection({
           </div>
         )}
 
-        {/* Top match chips */}
-        {detectionResults?.topMatches?.length > 0 && (
+        {/* Detected keywords chips */}
+        {detectionResults?.detectedKeywords?.length > 0 && (
           <div
             className="mt-4 rounded-xl border p-4"
             style={{ background: 'rgba(160,106,75,0.05)', borderColor: 'var(--border)' }}
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              Closest matches:
+              Detected from image:
             </p>
             <div className="flex flex-wrap gap-2">
-              {detectionResults.topMatches.slice(0, 5).map((m, i) => (
+              {detectionResults.detectedKeywords.slice(0, 8).map((kw, i) => (
                 <span
                   key={i}
                   className="rounded-full border px-2.5 py-1 text-xs"
                   style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                 >
-                  {m.title} — {m.score}
+                  {kw}
                 </span>
               ))}
             </div>
+            {detectionResults.description && (
+              <p className="mt-2 text-xs italic" style={{ color: 'var(--text-muted)' }}>
+                "{detectionResults.description}"
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -439,9 +486,10 @@ export default function Home() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageSearching, setImageSearching] = useState(false);
-  const [imageSearchError, setImageSearchError] = useState(null); // ✅ new
+  const [imageSearchError, setImageSearchError] = useState(null);
   const [detectionResults, setDetectionResults] = useState(null);
 
+  // Filter state
   const [filterStyle, setFilterStyle] = useState('');
   const [filterMedium, setFilterMedium] = useState('');
   const [filterMaxPrice, setFilterMaxPrice] = useState('');
@@ -469,6 +517,17 @@ export default function Home() {
     });
   }, [artworks, auctions]);
 
+  // ✅ Derive styles and mediums from purchasable artworks
+  const styles = useMemo(
+    () => [...new Set(purchasableArtworks.map((a) => a.style).filter(Boolean))],
+    [purchasableArtworks]
+  );
+
+  const mediums = useMemo(
+    () => [...new Set(purchasableArtworks.map((a) => a.medium).filter(Boolean))],
+    [purchasableArtworks]
+  );
+
   const applyFilters = useCallback(
     (list) =>
       list.filter((a) => {
@@ -493,7 +552,6 @@ export default function Home() {
     }
   };
 
-  // ✅ File chosen — store file + preview, don't trigger search yet
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -504,7 +562,6 @@ export default function Home() {
     reader.readAsDataURL(file);
   };
 
-  // ✅ Remove image without clearing search results
   const handleImageRemove = () => {
     setImageFile(null);
     setImagePreview(null);
@@ -512,7 +569,6 @@ export default function Home() {
     setDetectionResults(null);
   };
 
-  // ✅ "Find similar" clicked — run the actual search
   const handleImageSearch = async () => {
     if (!imageFile) return;
 
@@ -544,13 +600,16 @@ export default function Home() {
     }
   };
 
-  // ✅ Clear everything — search results, image, error
+  // ✅ Clear search AND filters together
   const clearSearch = () => {
     setSearchResults(null);
     setImageFile(null);
     setImagePreview(null);
     setDetectionResults(null);
     setImageSearchError(null);
+    setFilterStyle('');
+    setFilterMedium('');
+    setFilterMaxPrice('');
   };
 
   const displayArtworks = applyFilters(searchResults ?? purchasableArtworks);
@@ -584,6 +643,19 @@ export default function Home() {
         onImageRemove={handleImageRemove}
         detectionResults={detectionResults}
         imageSearchError={imageSearchError}
+        styles={styles}
+        mediums={mediums}
+        filterStyle={filterStyle}
+        filterMedium={filterMedium}
+        filterMaxPrice={filterMaxPrice}
+        onFilterStyle={setFilterStyle}
+        onFilterMedium={setFilterMedium}
+        onFilterMaxPrice={setFilterMaxPrice}
+        onClearFilters={() => {
+          setFilterStyle('');
+          setFilterMedium('');
+          setFilterMaxPrice('');
+        }}
       />
 
       <main className="min-h-[75vh] flex items-center">

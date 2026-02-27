@@ -68,15 +68,15 @@ Write naturally flowing paragraphs without section breaks or labels. Begin direc
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Gemini API error:', errorData);
-      return { error: 'Failed to generate summary' };
-    }
+  const err = await response.json().catch(() => ({}));
+  console.error('Gemini API error:', response.status, err);
+  return { error: err?.error || 'Failed to generate summary' };
+}
 
     const data = await response.json();
-    
-    // Extract the text from Gemini's response
-    const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    // Extract the text from the route's { success, text } response shape
+    const summary = data?.text;
 
     if (!summary) {
       return { error: 'No summary generated' };
@@ -131,11 +131,15 @@ Use vivid, specific language. Avoid generic phrases. Be concise and compelling.`
     });
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Gemini API error:', response.status, errorData);
       return { error: 'Failed to generate summary' };
     }
 
     const data = await response.json();
-    const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    // Extract the text from the route's { success, text } response shape
+    const summary = data?.text;
 
     if (!summary) {
       return { error: 'No summary generated' };

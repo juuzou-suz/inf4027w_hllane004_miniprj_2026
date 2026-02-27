@@ -9,7 +9,7 @@ export default function AuctionsPage() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all'); // all, live, upcoming, ended
+  const [filter, setFilter] = useState('all'); // all, live, upcoming, ended, cancelled
 
   // ---------- Helpers ----------
   const formatPrice = (price) =>
@@ -28,7 +28,6 @@ export default function AuctionsPage() {
   };
 
   const badge = (status) => {
-    // Dark-safe badges: light-ish text, tinted backgrounds, subtle borders
     const map = {
       live: {
         label: 'Live',
@@ -50,6 +49,13 @@ export default function AuctionsPage() {
         fg: 'rgba(245, 239, 230, 0.90)',
         bd: 'rgba(255, 255, 255, 0.10)',
         icon: '⏹️',
+      },
+      cancelled: {
+        label: 'Cancelled',
+        bg: 'rgba(190, 58, 38, 0.12)',
+        fg: 'rgba(255, 180, 180, 0.95)',
+        bd: 'rgba(255, 120, 120, 0.25)',
+        icon: '❌',
       },
       completed: {
         label: 'Completed',
@@ -78,14 +84,21 @@ export default function AuctionsPage() {
       setLoading(true);
       const data = await getAllAuctions();
 
-      // compute correct statuses immediately for UI
-      const withStatus = data.map((a) => ({ ...a, status: getAuctionStatus(a) }));
+      // Compute correct statuses immediately for UI
+      // Don't override "cancelled" status - respect it if set by admin
+      const withStatus = data.map((a) => {
+        if (a.status === 'cancelled') {
+          return { ...a, status: 'cancelled' };
+        }
+        return { ...a, status: getAuctionStatus(a) };
+      });
+      
       setAuctions(withStatus);
 
-      // update db if needed
+      // Update db if needed (but never change cancelled to something else)
       for (const a of withStatus) {
         const original = data.find((x) => x.id === a.id);
-        if (original && original.status !== a.status) {
+        if (original && original.status !== a.status && original.status !== 'cancelled') {
           updateAuctionStatusIfNeeded(a.id, a);
         }
       }
@@ -112,6 +125,9 @@ export default function AuctionsPage() {
         (async () => {
           await Promise.all(
             prev.map(async (auction) => {
+              // Never change status of cancelled auctions
+              if (auction.status === 'cancelled') return;
+              
               const correct = getAuctionStatus(auction);
               if (correct !== auction.status) {
                 await updateAuctionStatusIfNeeded(auction.id, { ...auction, status: correct });
@@ -120,10 +136,15 @@ export default function AuctionsPage() {
           );
         })();
 
-        return prev.map((auction) => ({
-          ...auction,
-          status: getAuctionStatus(auction),
-        }));
+        return prev.map((auction) => {
+          // Keep cancelled status
+          if (auction.status === 'cancelled') return auction;
+          
+          return {
+            ...auction,
+            status: getAuctionStatus(auction),
+          };
+        });
       });
     }, 10000);
 
@@ -136,11 +157,12 @@ export default function AuctionsPage() {
   }, [auctions, filter]);
 
   const counts = useMemo(() => {
-    const c = { all: auctions.length, live: 0, upcoming: 0, ended: 0 };
+    const c = { all: auctions.length, live: 0, upcoming: 0, ended: 0, cancelled: 0 };
     for (const a of auctions) {
       if (a.status === 'live') c.live++;
       if (a.status === 'upcoming') c.upcoming++;
       if (a.status === 'ended') c.ended++;
+      if (a.status === 'cancelled') c.cancelled++;
     }
     return c;
   }, [auctions]);
@@ -192,6 +214,7 @@ export default function AuctionsPage() {
           <Chip value="live" label="🔴 Live" count={counts.live} />
           <Chip value="upcoming" label="📅 Upcoming" count={counts.upcoming} />
           <Chip value="ended" label="⏹️ Ended" count={counts.ended} />
+          <Chip value="cancelled" label="❌ Cancelled" count={counts.cancelled} />
         </div>
 
         {/* Loading */}
@@ -226,6 +249,8 @@ export default function AuctionsPage() {
             <p className="mt-2 text-sm text-muted-foreground">
               {filter === 'live'
                 ? 'There are no live auctions right now. Check back soon.'
+                : filter === 'cancelled'
+                ? 'No cancelled auctions to show.'
                 : 'Check back later for upcoming auctions.'}
             </p>
 
@@ -267,18 +292,37 @@ export default function AuctionsPage() {
                         {badge(auction.status)}
                       </div>
 
-                      {/* Bid box */}
-                      <div className="mt-5 rounded-2xl border border-border p-4 bg-[rgba(255,255,255,0.04)]">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Current bid
+                      {/* Bid box - only show if not cancelled */}
+                      {auction.status !== 'cancelled' && (
+                        <div className="mt-5 rounded-2xl border border-border p-4 bg-[rgba(255,255,255,0.04)]">
+                          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Current bid
+                          </div>
+                          <div className="mt-1 font-display text-2xl font-black text-foreground">
+                            {formatPrice(auction.currentBid)}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {auction.bidCount || 0} {auction.bidCount === 1 ? 'bid' : 'bids'}
+                          </div>
                         </div>
-                        <div className="mt-1 font-display text-2xl font-black text-foreground">
-                          {formatPrice(auction.currentBid)}
+                      )}
+
+                      {/* Cancelled message */}
+                      {auction.status === 'cancelled' && (
+                        <div className="mt-5 rounded-2xl border p-4" style={{
+                          borderColor: 'rgba(255,120,120,0.25)',
+                          background: 'rgba(190,58,38,0.12)'
+                        }}>
+                          <p className="text-sm font-semibold" style={{ color: 'rgba(255,180,180,0.95)' }}>
+                            This auction has been cancelled
+                          </p>
+                          {auction.cancellationReason && (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              {auction.cancellationReason}
+                            </p>
+                          )}
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {auction.bidCount || 0} {auction.bidCount === 1 ? 'bid' : 'bids'}
-                        </div>
-                      </div>
+                      )}
 
                       {/* Timing */}
                       <div className="mt-4 space-y-1.5 text-sm text-muted-foreground">
@@ -299,6 +343,11 @@ export default function AuctionsPage() {
                             <span className="font-semibold">Winner:</span> {auction.winnerId.substring(0, 8)}...
                           </div>
                         )}
+                        {auction.status === 'cancelled' && (
+                          <div style={{ color: 'rgba(255,180,180,0.95)' }}>
+                            <span className="font-semibold">Cancelled</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* CTA */}
@@ -306,11 +355,19 @@ export default function AuctionsPage() {
                         <div
                           className="rounded-full px-5 py-3 text-center text-sm font-semibold transition-all group-hover:brightness-110"
                           style={{
-                            background: auction.status === 'live' ? 'rgba(190, 58, 38, 0.90)' : 'var(--clay)',
+                            background: auction.status === 'live' 
+                              ? 'rgba(190, 58, 38, 0.90)' 
+                              : auction.status === 'cancelled'
+                              ? 'rgba(255,255,255,0.10)'
+                              : 'var(--clay)',
                             color: '#F5EFE6',
                           }}
                         >
-                          {auction.status === 'live' ? 'View auction' : 'View details'}
+                          {auction.status === 'live' 
+                            ? 'View auction' 
+                            : auction.status === 'cancelled'
+                            ? 'View details'
+                            : 'View details'}
                         </div>
                       </div>
                     </div>
