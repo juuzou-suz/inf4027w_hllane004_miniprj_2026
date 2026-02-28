@@ -334,31 +334,6 @@ export default function AdminDashboard() {
               <StatCard label="Live Auctions" value={liveAuctionsCount} icon={Gavel} accent="#BE3A26" />
             </div>
 
-            {/* Quick actions */}
-            <div className="rounded-2xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <SectionHeader title="Quick Actions" sub="Manage your gallery" />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {[
-                  { href: '/admin/artworks/new', label: 'Add Artwork', sub: 'Create a new listing' },
-                  { href: '/admin/artworks', label: 'Manage Artworks', sub: 'View and edit listings' },
-                  { href: '/admin/auctions', label: 'Manage Auctions', sub: 'Create and monitor' },
-                ].map((action) => (
-                  <Link
-                    key={action.href}
-                    href={action.href}
-                    className="group flex items-center justify-between rounded-xl border p-4 transition-all hover:bg-white/5 hover:shadow-md"
-                    style={{ borderColor: 'var(--border)' }}
-                  >
-                    <div>
-                      <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{action.label}</p>
-                      <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>{action.sub}</p>
-                    </div>
-                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--clay)' }} />
-                  </Link>
-                ))}
-              </div>
-            </div>
-
             {/* Top selling + top customers */}
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-2xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>

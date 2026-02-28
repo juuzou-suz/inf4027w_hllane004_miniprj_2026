@@ -1,5 +1,4 @@
 'use client';
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -11,9 +10,6 @@ export function CartProvider({ children }) {
   const [cartLoaded, setCartLoaded] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
 
-  // ✅ FIX 1: Listen to auth state changes.
-  // On login  → load that user's saved cart from localStorage.
-  // On logout → wipe cart from memory so it shows empty immediately.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -26,21 +22,25 @@ export function CartProvider({ children }) {
           setCart([]);
         }
       } else {
-        // Logged out — clear memory only, storage is kept for next login
         setCurrentUserId(null);
-        setCart([]);
+        try {
+          const saved = localStorage.getItem('cart_guest');
+          setCart(saved ? JSON.parse(saved) : []);
+        } catch {
+          setCart([]);
+        }
       }
       setCartLoaded(true);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Persist cart to localStorage, keyed per user so carts never bleed across accounts
+  // Persist cart to localStorage
   useEffect(() => {
-    if (!cartLoaded || !currentUserId) return;
+    if (!cartLoaded) return;
     try {
-      localStorage.setItem(`cart_${currentUserId}`, JSON.stringify(cart));
+      const key = currentUserId ? `cart_${currentUserId}` : 'cart_guest';
+      localStorage.setItem(key, JSON.stringify(cart));
     } catch (error) {
       console.error('Error saving cart:', error);
     }
@@ -62,12 +62,8 @@ export function CartProvider({ children }) {
 
   const removeFromCart = (artworkId) =>
     setCart((prev) => prev.filter((item) => item.id !== artworkId));
-
   const clearCart = () => setCart([]);
-
-  const getCartTotal = () =>
-    cart.reduce((total, item) => total + (item.price || 0), 0);
-
+  const getCartTotal = () => cart.reduce((total, item) => total + (item.price || 0), 0);
   const getCartCount = () => cart.length;
 
   return (

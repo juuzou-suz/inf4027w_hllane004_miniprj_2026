@@ -75,12 +75,14 @@ export default function AuctionCheckoutPage() {
     }
   };
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price || 0);
+  const formatPrice = (value) =>
+  new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
+
 
   const handlePlaceOrder = async () => {
     if (!selectedPayment) {
@@ -159,10 +161,10 @@ export default function AuctionCheckoutPage() {
         <div className="mb-8">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
             style={{ borderColor: 'rgba(160,106,75,0.45)', background: 'rgba(160,106,75,0.10)', color: 'var(--text-primary)' }}>
-            🏆 Auction Won
+            Auction Won
           </div>
           <h1 className="font-display text-4xl font-black">Complete Your Purchase</h1>
-          <p className="mt-1 text-muted-foreground">You won this auction — complete payment to claim the artwork.</p>
+          <p className="mt-1 text-muted-foreground">You won this auction, complete payment to claim the artwork.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -228,7 +230,7 @@ export default function AuctionCheckoutPage() {
 
               <div className="mt-4 rounded-xl border border-[rgba(140,180,255,0.35)] bg-[rgba(140,180,255,0.10)] p-3">
                 <p className="text-sm text-[rgba(210,230,255,0.95)]">
-                  💡 Payment is simulated — no real transaction will occur. Simply select a method and place your order.
+                  Select a method and place the order to continue.
                 </p>
               </div>
             </div>

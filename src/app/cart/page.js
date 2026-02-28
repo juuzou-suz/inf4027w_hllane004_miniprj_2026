@@ -1,122 +1,129 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function CartPage() {
   const { user, loading: authLoading } = useAuth();
   const { cart, removeFromCart, getCartTotal, clearCart, cartLoaded } = useCart();
   const router = useRouter();
-  const [placing, setPlacing] = useState(false);
 
-  // ✅ Track whether the cart had items when the page first loaded.
-  // If it was already empty on arrival → redirect to /artworks.
-  // If the user empties it themselves → stay and show the empty cart UI.
-  const cartHadItemsOnLoad = useRef(null);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
-    if (authLoading || !cartLoaded) return;
-    if (!user) { router.push('/login?redirect=/cart'); return; }
+  if (!cartLoaded) return;
+  if (cart.length === 0) router.push('/artworks');
+}, [cartLoaded, cart, router]);
 
-    // First time we have a definitive cart state, record it
-    if (cartHadItemsOnLoad.current === null) {
-      cartHadItemsOnLoad.current = cart.length > 0;
-      // If it was already empty when they arrived, redirect away
-      if (cart.length === 0 && !placing) {
-        router.push('/artworks');
-      }
-    }
-    // After that, never redirect — let the empty cart UI show naturally
-  }, [cart, cartLoaded, authLoading, user, placing, router]);
-
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price);
+  const formatPrice = (value) =>
+    new Intl.NumberFormat("en-ZA", {
+      style: "currency",
+      currency: "ZAR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value) || 0);
 
   const handleCheckout = () => {
-    if (!user) { router.push('/login?redirect=/cart'); return; }
-    router.push('/checkout');
+  if (!user) { router.push('/login?redirect=/cart'); return; }
+  router.push('/checkout');
+};
+
+  const handleClearCart = async () => {
+    if (clearing) return;
+
+    const ok = window.confirm("Remove all items from your cart?");
+    if (!ok) return;
+
+    setClearing(true);
+    try {
+      await clearCart();
+    } finally {
+      setClearing(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background py-12 text-foreground">
       <div className="container max-w-4xl">
-
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-black mb-2">Your Cart</h1>
+          <h1 className="mb-2 font-display text-4xl font-black">Cart</h1>
           <p className="text-muted-foreground">
             {cart.length === 0
-              ? 'Your cart is empty'
-              : `${cart.length} ${cart.length === 1 ? 'item' : 'items'} in your cart`}
+              ? "Your cart is empty."
+              : `${cart.length} ${cart.length === 1 ? "item" : "items"} in your cart`}
           </p>
         </div>
 
         {/* Empty state */}
         {cart.length === 0 && (
           <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-lg">
-            <div className="text-7xl mb-6">🛒</div>
-            <h2 className="text-2xl font-bold mb-3">Your cart is empty</h2>
-            <p className="text-muted-foreground mb-8">
-              Explore our collection and add artworks you love!
+            <h2 className="mb-3 text-2xl font-bold">Nothing here yet</h2>
+            <p className="mb-8 text-muted-foreground">
+              Browse the collection and add works you would like to acquire.
             </p>
             <Link
               href="/artworks"
-              className="inline-block rounded-full bg-primary px-8 py-3 text-primary-foreground
-                         font-semibold text-base hover:brightness-110 transition"
+              className="inline-block rounded-full bg-primary px-8 py-3 text-base font-semibold text-primary-foreground transition hover:brightness-110"
             >
-              Browse Artworks
+              View collection
             </Link>
           </div>
         )}
 
         {/* Cart items */}
         {cart.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* Items list */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="space-y-4 lg:col-span-2">
               {cart.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-2xl border border-border bg-card overflow-hidden flex shadow-lg"
+                  className="flex overflow-hidden rounded-2xl border border-border bg-card shadow-lg"
                 >
-                  <div className="w-28 sm:w-32 h-28 sm:h-32 flex-shrink-0">
+                  <div className="h-28 w-28 flex-shrink-0 sm:h-32 sm:w-32">
                     <img
-                      src={item.imageUrl || 'https://via.placeholder.com/200x200?text=No+Image'}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
+                      src={item.imageUrl || "/Images/placeholder.png"}
+                      alt={item.title || "Artwork"}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/Images/placeholder.png";
+                      }}
                     />
                   </div>
 
-                  <div className="flex-1 p-4 flex flex-col justify-between">
+                  <div className="flex flex-1 flex-col justify-between p-4">
                     <div>
                       <h3 className="text-lg font-bold text-foreground">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">by {item.artist}</p>
-                      <p className="text-sm text-muted-foreground/80 mt-1">
-                        {item.style} · {item.medium}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{item.artist ? `by ${item.artist}` : "—"}</p>
+                      {(item.style || item.medium) && (
+                        <p className="mt-1 text-sm text-muted-foreground/80">
+                          {[item.style, item.medium].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="flex justify-between items-center mt-3">
+                    <div className="mt-3 flex items-center justify-between">
                       <span className="font-display text-xl font-black text-primary">
                         {formatPrice(item.price)}
                       </span>
+
                       <button
                         onClick={() => removeFromCart(item.id)}
-                        className="text-sm font-medium transition flex items-center gap-1
-                                   text-[rgba(255,170,170,0.95)] hover:text-[rgba(255,120,120,0.95)]"
+                        className="flex items-center gap-1 text-sm font-medium text-[rgba(255,170,170,0.95)] transition hover:text-[rgba(255,120,120,0.95)]"
                         aria-label={`Remove ${item.title} from cart`}
+                        type="button"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                         Remove
                       </button>
@@ -126,68 +133,56 @@ export default function CartPage() {
               ))}
 
               <button
-                onClick={() => {
-                  if (confirm('Are you sure you want to clear your cart?')) clearCart();
-                }}
-                className="text-sm font-medium transition
-                           text-[rgba(255,170,170,0.95)] hover:text-[rgba(255,120,120,0.95)]"
+                onClick={handleClearCart}
+                className="text-sm font-medium text-[rgba(255,170,170,0.95)] transition hover:text-[rgba(255,120,120,0.95)]"
+                type="button"
+                disabled={clearing}
               >
-                Clear entire cart
+                Remove all items
               </button>
             </div>
 
             {/* Order summary */}
             <div className="lg:col-span-1">
-              <div className="rounded-2xl border border-border bg-card p-6 sticky top-6 shadow-lg">
-                <h2 className="text-xl font-bold mb-6">Order Summary</h2>
+              <div className="sticky top-6 rounded-2xl border border-border bg-card p-6 shadow-lg">
+                <h2 className="mb-6 text-xl font-bold">Order Summary</h2>
 
-                <div className="space-y-3 mb-6">
+                <div className="mb-6 space-y-3">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm gap-3">
-                      <span className="text-muted-foreground truncate flex-1">{item.title}</span>
-                      <span className="font-medium text-foreground flex-shrink-0">
+                    <div key={item.id} className="flex justify-between gap-3 text-sm">
+                      <span className="flex-1 truncate text-muted-foreground">{item.title}</span>
+                      <span className="flex-shrink-0 font-medium text-foreground">
                         {formatPrice(item.price)}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-border pt-4 mb-6">
-                  <div className="flex justify-between items-center">
+                <div className="mb-6 border-t border-border pt-4">
+                  <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-foreground">Total</span>
-                    <span className="text-lg font-bold text-primary">
-                      {formatPrice(getCartTotal())}
-                    </span>
+                    <span className="text-lg font-bold text-primary">{formatPrice(getCartTotal())}</span>
                   </div>
                 </div>
 
-                {!user && (
-                  <div className="rounded-xl border border-[rgba(255,200,120,0.35)] bg-[rgba(255,200,120,0.12)] p-3 mb-4">
-                    <p className="text-sm text-[rgba(255,235,205,0.95)]">
-                      You&apos;ll need to log in to complete your purchase. Your cart will be saved!
-                    </p>
-                  </div>
-                )}
-
                 <button
                   onClick={handleCheckout}
-                  className="w-full rounded-full py-4 font-semibold text-base transition
-                             bg-primary text-primary-foreground hover:brightness-110"
+                  className="w-full rounded-full bg-primary py-4 text-base font-semibold text-primary-foreground transition hover:brightness-110"
+                  type="button"
                 >
-                  {user ? 'Proceed to Checkout' : 'Log In to Checkout'}
+                  Continue to checkout
                 </button>
 
                 <Link
                   href="/artworks"
-                  className="block text-center font-medium mt-4 transition text-primary hover:opacity-80"
+                  className="mt-4 block text-center text-sm font-medium text-primary transition hover:opacity-80"
                 >
-                  ← Continue Shopping
+                  Continue browsing
                 </Link>
               </div>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

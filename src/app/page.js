@@ -33,7 +33,7 @@ const slides = [
   {
     image: '/Images/hero3.jpg',
     title: 'Own a Story',
-    subtitle: 'Every artwork carries memory, identity, and meaning. Collect pieces that speak.',
+    subtitle: 'Every artwork carries memory, identity, and meaning. Collect with intention.',
   },
   {
     image: '/Images/hero4.jpg',
@@ -226,10 +226,10 @@ function SearchSection({
         <div className="mb-6 flex items-start justify-between gap-6">
           <div>
             <h2 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              Find your next piece
+              Discover your next piece
             </h2>
             <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-              Search by style, medium, subject, price — or upload an image.
+              Search by style, medium, subject, or price — or upload an image to find similar artworks.
             </p>
           </div>
 
@@ -261,7 +261,7 @@ function SearchSection({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try: abstract under R2000, portrait charcoal..."
+              placeholder="Example: abstract under R2,000; charcoal portrait"
               className="flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
               style={{ color: '#111111', background: '#ffffff', border: '1px solid #ffffff', borderRadius: '0.5rem', margin: '4px' }}
             />
@@ -331,7 +331,7 @@ function SearchSection({
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border border-white border-t-transparent" />
                       Searching…
                     </span>
-                  ) : 'Find similar'}
+                  ) : 'Find similar artworks'}
                 </button>
               </>
             )}
@@ -376,7 +376,7 @@ function SearchSection({
             type="number"
             value={filterMaxPrice}
             onChange={(e) => onFilterMaxPrice(e.target.value)}
-            placeholder="Max ZAR"
+            placeholder="Max price (ZAR)"
             className="h-[38px] w-28 rounded-lg border px-3 text-sm outline-none"
             style={{ borderColor: 'var(--border)', background: 'var(--surface)', color: 'var(--text-primary)' }}
           />
@@ -403,7 +403,7 @@ function SearchSection({
               color: 'rgba(255,220,215,0.95)',
             }}
           >
-            Image search failed: {imageSearchError}. Try a different image or use text search.
+            Image search failed: {imageSearchError}. We couldn’t complete the image search. Try a different image, or search using text
           </div>
         )}
 
@@ -414,7 +414,7 @@ function SearchSection({
             style={{ background: 'rgba(160,106,75,0.05)', borderColor: 'var(--border)' }}
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              Detected from image:
+              Detected in image:
             </p>
             <div className="flex flex-wrap gap-2">
               {detectionResults.detectedKeywords.slice(0, 8).map((kw, i) => (
@@ -444,28 +444,39 @@ function WhyChooseSection() {
   return (
     <section
       className="min-h-[75vh] flex items-center border-t"
-      style={{ borderColor: 'var(--border)', background: 'rgba(232, 216, 195, 0.35)' }}
+      style={{ borderColor: "var(--border)", background: "var(--background)" }}
     >
-      <div className="container w-full py-6">
-        <h2 className="font-display text-3xl font-black md:text-4xl" style={{ color: 'var(--text-primary)' }}>
-          Why choose Curate
+      <div className="container w-full py-16">
+        <h2 className="font-display text-3xl font-black md:text-4xl" style={{ color: "var(--text-primary)" }}>
+          Why Curate
         </h2>
-        <p className="mt-2 max-w-lg text-sm md:text-base" style={{ color: 'var(--text-muted)' }}>
-          Built for discovery, collecting, and live auctions — without gatekeeping.
+        <p className="mt-2 max-w-lg text-sm md:text-base" style={{ color: "var(--text-muted)" }}>
+          Built for discovery, collecting, and live auctions — with a calm focus on the work.
         </p>
+
         <div className="mt-12 grid gap-8 md:grid-cols-3">
           {features.map((f) => (
             <div
               key={f.title}
               className="rounded-xl border p-8 transition-shadow duration-300 hover:shadow-lg"
-              style={{ borderColor: 'var(--border)', background: 'rgba(245, 239, 230, 0.70)' }}
+              style={{ borderColor: "var(--border)", background: "var(--surface)" }}
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(24, 74, 61, 0.1)' }}>
-                <f.icon size={22} style={{ color: 'rgba(8, 8, 8, 0.7)' }} />
+              <div
+                className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+                style={{ background: "rgba(160, 106, 75, 0.16)" }}
+              >
+                <f.icon size={22} style={{ color: "var(--text-primary)" }} />
               </div>
-              <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{f.title}</h3>
-              <p className="mt-1 text-sm font-semibold" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>{f.tagline}</p>
-              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'rgba(8, 8, 8, 0.7)' }}>{f.description}</p>
+
+              <h3 className="font-display text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+                {f.title}
+              </h3>
+              <p className="mt-1 text-sm font-semibold" style={{ color: "var(--text-muted)" }}>
+                {f.tagline}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                {f.description}
+              </p>
             </div>
           ))}
         </div>
@@ -664,7 +675,7 @@ export default function Home() {
             <div className="flex justify-center py-16">
               <div
                 className="h-10 w-10 animate-spin rounded-full border-2"
-                style={{ borderColor: 'var(--border)', borderTopColor: 'var(--forest)' }}
+                style={{ borderColor: 'var(--border)', borderTopColor: 'var(--clay)' }}
               />
             </div>
           ) : hasResults ? (
@@ -672,7 +683,7 @@ export default function Home() {
               <div className="mb-8 flex items-center justify-between">
                 <div>
                   <h2 className="font-display text-2xl font-black" style={{ color: 'var(--text-primary)' }}>
-                    {imageFile ? 'Image search results' : 'Search results'}
+                    {imageFile ? 'Similar artworks' : 'Search results'}
                   </h2>
                   <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                     {displayArtworks.length === 0
@@ -683,10 +694,10 @@ export default function Home() {
                 <button
                   onClick={clearSearch}
                   className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
-                  style={{ color: 'var(--forest)' }}
+                  style={{ color: 'var(--clay)' }}
                   type="button"
                 >
-                  Back to all
+                  View all artworks
                   <ArrowRight size={16} />
                 </button>
               </div>

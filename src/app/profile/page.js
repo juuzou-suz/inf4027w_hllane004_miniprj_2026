@@ -153,12 +153,13 @@ export default function ProfilePage() {
 
   const displayName = (user?.name || user?.displayName || '').trim() || 'there';
 
-  const formatPrice = (price) =>
+  const formatPrice = (value) =>
     new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price || 0);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value) || 0);
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
@@ -297,20 +298,21 @@ export default function ProfilePage() {
               className="mt-4 flex items-center justify-between gap-4 rounded-2xl border p-4"
               style={{ borderColor: 'rgba(160,106,75,0.45)', background: 'rgba(160,106,75,0.10)' }}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">🏆</span>
-                <div>
-                  <p className="font-semibold text-foreground">
-                    You have {unpaidWonCount} unpaid won auction{unpaidWonCount > 1 ? 's' : ''}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Complete payment to claim your artwork{unpaidWonCount > 1 ? 's' : ''}.</p>
-                </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  You have {unpaidWonCount} unpaid won auction{unpaidWonCount > 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Complete payment to claim your artwork{unpaidWonCount > 1 ? 's' : ''}.
+                </p>
               </div>
+
               <button
                 onClick={() => setActiveTab('won')}
                 className="flex-shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
+                type="button"
               >
-                Pay now
+                Complete payment
               </button>
             </div>
           )}
@@ -449,8 +451,15 @@ export default function ProfilePage() {
                           <p className="font-semibold text-foreground">
                             Order #{order.id?.substring(0, 8)}…
                             {order.type === 'auction' && (
-                              <span className="ml-2 rounded-full border border-[rgba(160,106,75,0.35)] bg-[rgba(160,106,75,0.10)] px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                                🏆 Auction
+                              <span
+                                className="ml-2 rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                                style={{
+                                borderColor: 'rgba(160,106,75,0.35)',
+                                background: 'rgba(160,106,75,0.10)',
+                                color: 'var(--text-primary)',
+                                }}
+                              >
+                                Auction purchase
                               </span>
                             )}
                           </p>
@@ -467,7 +476,7 @@ export default function ProfilePage() {
                             <div key={i} className="flex-shrink-0">
                               <img src={item.imageUrl || '/Images/placeholder.jpg'} alt={item.title || 'Artwork'}
                                 className="h-14 w-14 rounded-xl object-cover"
-                                onError={(e) => { e.target.src = '/Images/placeholder.jpg'; }} />
+                                onError={(e) => { e.currentTarget.src = '/Images/placeholder.png'; }} />
                               <p className="mt-1 w-14 truncate text-xs text-muted-foreground">{item.title}</p>
                             </div>
                           ))}
@@ -554,7 +563,7 @@ export default function ProfilePage() {
                               src={artwork.imageUrl}
                               alt={artwork.title}
                               className="h-20 w-20 flex-shrink-0 rounded-xl object-cover border border-border"
-                              onError={(e) => { e.target.src = '/Images/placeholder.jpg'; }}
+                             onError={(e) => { e.currentTarget.src = '/Images/placeholder.png'; }}
                             />
                           )}
 
@@ -575,12 +584,21 @@ export default function ProfilePage() {
                               {/* Payment status badge */}
                               <span
                                 className="flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold"
-                                style={isPaid
-                                  ? { borderColor: 'rgba(24,74,52,0.30)', background: 'rgba(24,74,52,0.10)', color: 'var(--text-primary)' }
-                                  : { borderColor: 'rgba(255,120,120,0.30)', background: 'rgba(190,58,38,0.14)', color: 'rgba(255,225,225,0.95)' }
-                                }
+                                style={
+                                  isPaid
+                                    ? {
+                                        borderColor: 'rgba(24,74,52,0.30)',
+                                        background: 'rgba(24,74,52,0.10)',
+                                        color: 'var(--text-primary)',
+                                      }
+                                    : {
+                                        borderColor: 'rgba(255,120,120,0.30)',
+                                        background: 'rgba(190,58,38,0.14)',
+                                        color: 'rgba(255,225,225,0.95)',
+                                     }
+                               }
                               >
-                                {isPaid ? '✅ PAID' : '⚠️ UNPAID'}
+                                {isPaid ? 'PAID' : 'PAYMENT REQUIRED'}
                               </span>
                             </div>
 
@@ -594,7 +612,7 @@ export default function ProfilePage() {
                                   href={`/auctions/checkout?auctionId=${auction.id}`}
                                   className="inline-flex items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
                                 >
-                                  🏆 Pay now
+                                  Complete payment
                                 </Link>
                               ) : (
                                 <Link
@@ -634,7 +652,7 @@ export default function ProfilePage() {
                     <div key={artwork.id} className="flex items-center gap-5 rounded-2xl border border-border bg-background/40 p-5">
                       <img src={artwork.imageUrl || '/Images/placeholder.jpg'} alt={artwork.title || 'Artwork'}
                         className="h-20 w-20 rounded-xl object-cover"
-                        onError={(e) => { e.target.src = '/Images/placeholder.jpg'; }} />
+                        onError={(e) => { e.currentTarget.src = '/Images/placeholder.png'; }} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-foreground">{artwork.title || 'Untitled'}</p>
                         <p className="truncate text-sm text-muted-foreground">by {artwork.artist || 'Unknown Artist'}</p>

@@ -7,7 +7,8 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const { user } = useAuth();
   const pathname = usePathname();
-
+  
+  // Hide footer in admin experience
   if (user?.role === 'admin' || pathname.startsWith('/admin')) return null;
 
   const currentYear = new Date().getFullYear();
@@ -22,11 +23,7 @@ export default function Footer() {
 
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
               A home for contemporary African art. Discover, collect, and support emerging artists redefining modern
-              expression.
-            </p>
-
-            <p className="mt-3 text-xs text-muted-foreground/70">
-              UCT INF4027W Web Development Mini Project
+              expression. Bid in real time.
             </p>
           </div>
 
@@ -38,7 +35,7 @@ export default function Footer() {
 
             <nav className="mt-4 flex flex-col gap-2 text-sm">
               <Link href="/" className="text-foreground/90 hover:text-primary transition-colors">Home</Link>
-              <Link href="/artworks" className="text-foreground/90 hover:text-primary transition-colors">Artworks</Link>
+              <Link href="/artworks" className="text-foreground/90 hover:text-primary transition-colors">Collection</Link>
               <Link href="/auctions" className="text-foreground/90 hover:text-primary transition-colors">Auctions</Link>
             </nav>
           </div>
@@ -50,9 +47,9 @@ export default function Footer() {
             </h4>
 
             <nav className="mt-4 flex flex-col gap-2 text-sm">
-              <Link href="/login" className="text-foreground/90 hover:text-primary transition-colors">Log In</Link>
-              <Link href="/register" className="text-foreground/90 hover:text-primary transition-colors">Register</Link>
-              <Link href="/profile" className="text-foreground/90 hover:text-primary transition-colors">Dashboard</Link>
+              <Link href="/login" className="text-foreground/90 hover:text-primary transition-colors">Log in</Link>
+              <Link href="/register" className="text-foreground/90 hover:text-primary transition-colors">Create account</Link>
+              <Link href="/profile" className="text-foreground/90 hover:text-primary transition-colors">Profile</Link>
             </nav>
           </div>
         </div>

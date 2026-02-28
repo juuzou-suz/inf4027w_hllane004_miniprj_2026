@@ -49,7 +49,7 @@ function FiltersBar({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search artworks..."
+                placeholder="Search by artist, style, medium, or keyword…"
                 className="ml-2 flex-1 bg-transparent text-sm outline-none text-foreground
                            placeholder:text-muted-foreground/70"
               />
@@ -98,7 +98,7 @@ function FiltersBar({
               type="number"
               value={filterMaxPrice}
               onChange={(e) => onFilterMaxPrice(e.target.value)}
-              placeholder="Max ZAR"
+              placeholder="Max price"
               className="h-[42px] w-28 rounded-md border border-border px-3 text-sm outline-none
                          bg-card text-foreground placeholder:text-muted-foreground/70"
             />
@@ -128,14 +128,16 @@ function FiltersBar({
               </button>
             )}
 
-            <button
-              onClick={onClearFilters}
-              className="h-[42px] rounded-full px-3 py-2 text-xs font-semibold
-                         text-primary transition-colors hover:opacity-80"
-              type="button"
-            >
-              Clear filters
-            </button>
+            {(filterStyle || filterMedium || filterMaxPrice || filterAvailable) && (
+              <button
+                onClick={onClearFilters}
+                className="h-[42px] rounded-full px-3 py-2 text-xs font-semibold
+                          text-primary transition-colors hover:opacity-80"
+                type="button"
+              >
+               Clear filters
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -229,6 +231,7 @@ export default function ArtworksPage() {
 
   const displayArtworks = applyFilters(searchResults ?? purchasableArtworks);
   const hasSearch = searchResults !== null;
+  const hasActiveFilters = !!filterStyle || !!filterMedium || !!filterMaxPrice || !!filterAvailable;
 
   return (
     <div className="min-h-screen bg-background text-foreground">

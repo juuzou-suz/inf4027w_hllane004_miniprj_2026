@@ -357,24 +357,6 @@ export default function AuctionDetailPage() {
               </div>
             )}
 
-            {/* Winner banner */}
-            {isEnded && !isCancelled && winnerId && (
-              <div
-                className="rounded-2xl border p-6"
-                style={{ borderColor: 'rgba(160,106,75,0.45)', background: 'rgba(160,106,75,0.10)' }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Auction ended · Winner
-                </p>
-                <p className="mt-2 font-display text-2xl font-black text-foreground">
-                  {isWinner ? '🏆 You won this auction!' : `🏆 ${winnerEmail || 'Winner determined'}`}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Winning bid: <span className="font-semibold text-foreground">{formatPrice(auction?.currentBid)}</span>
-                </p>
-              </div>
-            )}
-
             {/* Ended with no bids */}
             {isEnded && !isCancelled && !winnerId && (
               <div

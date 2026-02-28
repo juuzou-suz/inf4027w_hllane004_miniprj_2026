@@ -51,8 +51,8 @@
   --color-ring: var(--clay);
 }
 
-* {
-  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
+a, button, input, textarea, select {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, opacity 300ms ease, transform 300ms ease;
 }
 
 html, body {

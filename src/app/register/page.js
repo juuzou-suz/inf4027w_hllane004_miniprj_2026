@@ -1,46 +1,46 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect') || '/';
+  const redirectUrl = searchParams.get("redirect") || "/";
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async (e) => {
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
     if (loading) return;
 
-    setError('');
+    setError("");
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
 
     if (!trimmedName) {
-      setError('Please enter your full name');
+      setError("Enter your full name.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match.");
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Use at least 6 characters for your password.");
       return;
     }
 
@@ -50,21 +50,21 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
       const user = userCredential.user;
 
-      // Keep Firebase Auth displayName in sync (optional, but useful)
+      // Keep Firebase Auth displayName in sync (useful for profile + receipts).
       await updateProfile(user, { displayName: trimmedName });
 
-      // Create user profile in Firestore (merge-safe schema)
+      // Create user profile in Firestore (merge-safe schema).
       await setDoc(
-        doc(db, 'users', user.uid),
+        doc(db, "users", user.uid),
         {
           name: trimmedName,
           email: user.email,
-          role: 'customer',
+          role: "customer",
           createdAt: serverTimestamp(),
           address: {
-            street: '',
-            city: '',
-            postalCode: '',
+            street: "",
+            city: "",
+            postalCode: "",
           },
         },
         { merge: true }
@@ -72,46 +72,44 @@ export default function RegisterPage() {
 
       router.push(redirectUrl);
     } catch (err) {
-      console.error('Registration error:', err);
+      console.error("Registration error:", err);
 
       const code = err?.code;
-      if (code === 'auth/email-already-in-use') setError('This email is already registered. Please log in instead.');
-      else if (code === 'auth/invalid-email') setError('Invalid email address.');
-      else if (code === 'auth/weak-password') setError('Password is too weak. Use at least 6 characters.');
-      else setError('Registration failed. Please try again.');
+      if (code === "auth/email-already-in-use") setError("This email address is already registered. Sign in instead.");
+      else if (code === "auth/invalid-email") setError("Enter a valid email address.");
+      else if (code === "auth/weak-password") setError("Password is too weak. Use at least 6 characters.");
+      else setError("We couldn’t create your account. Please try again.");
 
       setLoading(false);
     }
   };
 
+  const loginHref = `/login${redirectUrl !== "/" ? `?redirect=${encodeURIComponent(redirectUrl)}` : ""}`;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background text-foreground">
       <div className="w-full max-w-md">
-        {/* Card */}
         <div className="rounded-2xl border border-border bg-card p-8 shadow-lg">
-          {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="font-display text-3xl font-black">Join Curate.</h1>
+            <h1 className="font-display text-3xl font-black">Create your account</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Create an account to start collecting and bidding.
+              Collect original works and place bids in real time.
             </p>
           </div>
 
-          {/* Error */}
           {error && (
             <div
               className="mb-6 rounded-xl border px-4 py-3 text-sm
                          border-[rgba(255,120,120,0.35)]
                          bg-[rgba(190,58,38,0.18)]
                          text-[rgba(255,225,225,0.95)]"
+              role="alert"
             >
               {error}
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleRegister} className="space-y-5">
-            {/* Full Name */}
+          <form onSubmit={handleCreateAccount} className="space-y-5">
             <div>
               <label
                 htmlFor="name"
@@ -133,10 +131,10 @@ export default function RegisterPage() {
                            focus:ring-2 focus:ring-[rgba(160,106,75,0.35)]
                            focus:border-[rgba(160,106,75,0.9)]
                            disabled:opacity-70"
+                autoComplete="name"
               />
             </div>
 
-            {/* Email */}
             <div>
               <label
                 htmlFor="email"
@@ -158,10 +156,10 @@ export default function RegisterPage() {
                            focus:ring-2 focus:ring-[rgba(160,106,75,0.35)]
                            focus:border-[rgba(160,106,75,0.9)]
                            disabled:opacity-70"
+                autoComplete="email"
               />
             </div>
 
-            {/* Password */}
             <div>
               <label
                 htmlFor="password"
@@ -183,10 +181,10 @@ export default function RegisterPage() {
                            focus:ring-2 focus:ring-[rgba(160,106,75,0.35)]
                            focus:border-[rgba(160,106,75,0.9)]
                            disabled:opacity-70"
+                autoComplete="new-password"
               />
             </div>
 
-            {/* Confirm */}
             <div>
               <label
                 htmlFor="confirmPassword"
@@ -208,6 +206,7 @@ export default function RegisterPage() {
                            focus:ring-2 focus:ring-[rgba(160,106,75,0.35)]
                            focus:border-[rgba(160,106,75,0.9)]
                            disabled:opacity-70"
+                autoComplete="new-password"
               />
             </div>
 
@@ -218,18 +217,14 @@ export default function RegisterPage() {
                          bg-primary text-primary-foreground
                          hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account…' : 'Create account'}
+              {loading ? "Creating account…" : "Create account"}
             </button>
           </form>
 
-          {/* Footer links */}
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link
-              href={`/login${redirectUrl !== '/' ? `?redirect=${redirectUrl}` : ''}`}
-              className="font-semibold text-primary hover:opacity-80"
-            >
-              Log in
+            Already have an account?{" "}
+            <Link href={loginHref} className="font-semibold text-primary hover:opacity-80">
+              Sign in
             </Link>
           </div>
         </div>

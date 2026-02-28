@@ -8,7 +8,7 @@ export default function NavbarWrapper() {
   const { user } = useAuth();
   const pathname = usePathname();
 
-  // Don't show navbar for admins OR on admin pages
+  // Keep the admin experience distraction-free (no customer navigation chrome)
   if (user?.role === 'admin' || pathname.startsWith('/admin')) {
     return null;
   }

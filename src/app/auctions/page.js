@@ -202,7 +202,7 @@ export default function AuctionsPage() {
       <div className="container">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-black">Art Auctions</h1>
+          <h1 className="font-display text-4xl font-black">Auctions</h1>
           <p className="mt-2 text-base md:text-lg text-muted-foreground">
             Participate in live auctions and bid on artworks that move you.
           </p>

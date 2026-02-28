@@ -23,7 +23,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
+        {/* Brand */}
         <Link href="/" className="font-display text-2xl font-bold text-foreground tracking-tight">
           Curate.
         </Link>
@@ -45,7 +45,7 @@ export default function Navbar() {
               isActivePrefix('/artworks') ? 'text-primary' : 'text-muted-foreground'
             }`}
           >
-            Artworks
+            Collection
           </Link>
 
           <Link
@@ -60,7 +60,7 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-4">
-          {/* Cart + Profile icons — non-admin only */}
+          {/* Cart + Profile icons (non-admin only) */}
           {!isAdmin && (
             <div className="flex items-center gap-3">
               <Link
@@ -75,13 +75,11 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
-
-              {/* ✅ Always show Profile icon (logged in or not) */}
               <Link
                 href={profileHref}
                 className="text-foreground transition-colors hover:text-primary"
                 aria-label="Profile"
-                title={user ? 'Profile' : 'Sign in to view profile'}
+                title={user ? 'Profile' : 'Sign in to view your profile'}
               >
                 <UserIcon size={20} />
               </Link>
@@ -101,7 +99,7 @@ export default function Navbar() {
                 onClick={logout}
                 className="rounded-full border border-border px-5 py-2 font-sans text-sm font-semibold text-foreground transition-all hover:bg-[rgba(255,255,255,0.06)]"
               >
-                Log out
+                Sign out
               </button>
             </div>
           ) : (
@@ -109,7 +107,7 @@ export default function Navbar() {
               href="/login"
               className="hidden rounded-full bg-primary px-5 py-2 font-sans text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 md:inline-block"
             >
-              Sign In
+              Sign in
             </Link>
           )}
 
@@ -129,9 +127,15 @@ export default function Navbar() {
         <div className="border-t border-border bg-background px-6 py-6 md:hidden">
           <nav className="flex flex-col gap-4 font-sans text-base">
             <Link href="/" className="font-medium text-foreground" onClick={() => setOpen(false)}>
+              Home
+            </Link>
+            <Link
+              href="/artworks"
+              className={isActivePrefix('/artworks') ? 'text-foreground' : 'text-muted-foreground'}
+              onClick={() => setOpen(false)}
+            >
               Collection
             </Link>
-
             <Link
               href="/auctions"
               className={isActivePrefix('/auctions') ? 'text-foreground' : 'text-muted-foreground'}
@@ -140,21 +144,11 @@ export default function Navbar() {
               Auctions
             </Link>
 
-            <Link
-              href="/artworks"
-              className={isActivePrefix('/artworks') ? 'text-foreground' : 'text-muted-foreground'}
-              onClick={() => setOpen(false)}
-            >
-              Artworks
-            </Link>
-
             {!isAdmin && (
               <Link href="/cart" className="text-muted-foreground" onClick={() => setOpen(false)}>
                 Cart {getCartCount() > 0 && `(${getCartCount()})`}
               </Link>
             )}
-
-            {/* ✅ Always show Profile in mobile menu too (consistent) */}
             {!isAdmin && (
               <Link href={profileHref} className="text-muted-foreground" onClick={() => setOpen(false)}>
                 Profile
@@ -170,7 +164,7 @@ export default function Navbar() {
                   }}
                   className="w-full rounded-full border border-border py-2.5 font-sans text-sm font-semibold text-foreground transition hover:bg-[rgba(255,255,255,0.06)]"
                 >
-                  Log out
+                  Sign out
                 </button>
               ) : (
                 <Link
@@ -178,7 +172,7 @@ export default function Navbar() {
                   className="block rounded-full bg-primary px-5 py-2.5 text-center font-sans text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
                   onClick={() => setOpen(false)}
                 >
-                  Sign In
+                  Sign in
                 </Link>
               )}
             </div>

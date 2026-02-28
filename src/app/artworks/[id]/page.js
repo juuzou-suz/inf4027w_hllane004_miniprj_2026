@@ -86,12 +86,13 @@ export default function ArtworkDetailPage() {
     setSummaryLoading(false);
   };
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-    }).format(price);
+  const formatPrice = (value) =>
+  new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -159,9 +160,10 @@ export default function ArtworkDetailPage() {
           {/* Image Section */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
             <img
-              src={artwork.imageUrl || 'https://via.placeholder.com/800x600?text=No+Image'}
-              alt={artwork.title}
+              src={artwork.imageUrl || '/Images/placeholder.png'}
+              alt={artwork.title || 'Artwork'}
               className="w-full h-auto"
+              onError={(e) => { e.currentTarget.src = '/Images/placeholder.png'; }}
             />
           </div>
 
@@ -227,15 +229,6 @@ export default function ArtworkDetailPage() {
                 )}
               </div>
             )}
-            {/* Price Box */}
-            {artwork.price && (
-              <div className="rounded-2xl border border-[rgba(160,106,75,0.55)] bg-[rgba(160,106,75,0.10)] p-6 mb-8">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Price</div>
-                <div className="font-display text-4xl font-black text-primary">
-                  {formatPrice(artwork.price)}
-                </div>
-              </div>
-            )}
 
             {/* Artwork Details */}
             <div className="rounded-2xl border border-border bg-card p-6 mb-8">
@@ -255,6 +248,9 @@ export default function ArtworkDetailPage() {
                 )}
 
                 {artwork.yearCreated && <DetailRow label="Year" value={artwork.yearCreated} />}
+                {artwork.price != null && artwork.price !== '' && (
+  <DetailRow label="Price" value={formatPrice(Number(artwork.price))} />
+)}
               </div>
             </div>
 
@@ -290,7 +286,7 @@ export default function ArtworkDetailPage() {
                 className="w-full rounded-full px-6 py-4 text-center text-base font-semibold
                            bg-primary text-primary-foreground hover:brightness-110 transition"
               >
-                Add to Cart
+                Add to cart
               </button>
             ) : artwork.status === 'sold' ? (
               <div className="text-center p-6 rounded-2xl border border-border bg-card">

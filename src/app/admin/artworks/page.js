@@ -263,7 +263,6 @@ export default function AdminArtworksPage() {
                           href={`/artworks/${artwork.id}`}
                           className="text-sm font-semibold transition hover:opacity-80"
                           style={{ color: 'var(--text-muted)' }}
-                          target="_blank"
                         >
                           View
                         </Link>

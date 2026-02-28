@@ -106,11 +106,11 @@ export default function AdminLayout({ children }) {
               className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition hover:brightness-110"
               style={{
                 background: 'rgba(255,255,255,0.04)',
-                color: 'rgba(255,225,225,0.95)',
+                color: 'rgba(250, 250, 250, 0.95)',
               }}
               type="button"
             >
-              Log out
+              Sign out
             </button>
           </div>
         </div>
