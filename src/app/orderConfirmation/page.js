@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -22,7 +22,6 @@ export default function OrderConfirmationPage() {
       return;
     }
     if (orderId) fetchOrder();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, user]);
 
   const fetchOrder = async () => {
@@ -80,7 +79,6 @@ export default function OrderConfirmationPage() {
           <p className="mb-5 text-muted-foreground">
             Thank you. Your order has been placed successfully.
           </p>
-
           <div className="inline-block rounded-full border border-[rgba(160,106,75,0.45)] bg-[rgba(160,106,75,0.10)] px-4 py-2">
             <p className="text-sm font-semibold text-foreground">
               Order reference:{" "}
@@ -94,7 +92,6 @@ export default function OrderConfirmationPage() {
         {order ? (
           <div className="mb-6 rounded-2xl border border-border bg-card p-6 shadow-lg">
             <h2 className="mb-4 text-xl font-bold">Order details</h2>
-
             <div className="mb-6 space-y-4">
               {order.items?.map((item, index) => (
                 <div key={index} className="flex items-center gap-4">
@@ -102,9 +99,7 @@ export default function OrderConfirmationPage() {
                     src={item.imageUrl || "/Images/placeholder.png"}
                     alt={item.title || "Artwork"}
                     className="h-14 w-14 rounded-xl border border-border object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "/Images/placeholder.png";
-                    }}
+                    onError={(e) => { e.currentTarget.src = "/Images/placeholder.png"; }}
                   />
                   <div className="flex-1">
                     <p className="font-semibold text-foreground">{item.title}</p>
@@ -114,34 +109,26 @@ export default function OrderConfirmationPage() {
                 </div>
               ))}
             </div>
-
             <div className="space-y-2 border-t border-border pt-4">
               <div className="flex justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">Date</span>
                 <span className="text-right font-medium text-foreground">{formatDate(order.createdAt)}</span>
               </div>
-
               <div className="flex justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">Payment method</span>
                 <span className="text-right font-medium text-foreground">
                   {paymentLabels[order.paymentMethod] || order.paymentMethod || "—"}
                 </span>
               </div>
-
               <div className="flex justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">Status</span>
                 <span
                   className="rounded-full border px-2.5 py-1 text-xs font-semibold"
-                  style={{
-                    borderColor: "rgba(190,255,210,0.25)",
-                    background: "rgba(190,255,210,0.10)",
-                    color: "rgba(210,255,230,0.95)",
-                  }}
+                  style={{ borderColor: "rgba(190,255,210,0.25)", background: "rgba(190,255,210,0.10)", color: "rgba(210,255,230,0.95)" }}
                 >
                   {(order.status || "unknown").toUpperCase()}
                 </span>
               </div>
-
               <div className="mt-2 flex justify-between border-t border-border pt-3 text-lg font-bold">
                 <span>Total paid</span>
                 <span className="text-primary">{formatPrice(order.total)}</span>
@@ -150,26 +137,29 @@ export default function OrderConfirmationPage() {
           </div>
         ) : (
           <div className="mb-6 rounded-2xl border border-border bg-card p-6 shadow-lg">
-            <p className="text-muted-foreground">We couldn’t load the order details.</p>
+            <p className="text-muted-foreground">We couldn't load the order details.</p>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Link
-            href="/"
-            className="rounded-full border border-border bg-card py-3 text-center font-semibold text-foreground transition hover:bg-[rgba(255,255,255,0.04)]"
-          >
+          <Link href="/" className="rounded-full border border-border bg-card py-3 text-center font-semibold text-foreground transition hover:bg-[rgba(255,255,255,0.04)]">
             Return home
           </Link>
-
-          <Link
-            href="/artworks"
-            className="rounded-full bg-primary py-3 text-center font-semibold text-primary-foreground transition hover:brightness-110"
-          >
+          <Link href="/artworks" className="rounded-full bg-primary py-3 text-center font-semibold text-primary-foreground transition hover:brightness-110">
             View collection
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary" />
+    </div>}>
+      <OrderConfirmationContent />
+    </Suspense>
   );
 }
