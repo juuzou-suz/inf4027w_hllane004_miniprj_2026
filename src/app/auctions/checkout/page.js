@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -15,7 +15,7 @@ const PAYMENT_METHODS = [
   { id: 'cash_on_delivery', label: 'Cash on Delivery', icon: '💵', description: 'Pay when you receive' },
 ];
 
-export default function AuctionCheckoutPage() {
+function AuctionCheckoutContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,13 +51,11 @@ export default function AuctionCheckoutPage() {
 
       const auctionData = { id: auctionDoc.id, ...auctionDoc.data() };
 
-      // Security: only the winner can access this page
       if (auctionData.winnerId !== user.uid) {
         router.push('/profile');
         return;
       }
 
-      // Already paid
       if (auctionData.paymentStatus === 'paid') {
         router.push(`/orderConfirmation?orderId=${auctionData.orderId}`);
         return;
@@ -76,13 +74,12 @@ export default function AuctionCheckoutPage() {
   };
 
   const formatPrice = (value) =>
-  new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(value) || 0);
-
+    new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value) || 0);
 
   const handlePlaceOrder = async () => {
     if (!selectedPayment) {
@@ -114,14 +111,8 @@ export default function AuctionCheckoutPage() {
         itemCount: 1,
       });
 
-      // Mark artwork as sold
       await updateDoc(doc(db, 'artworks', artwork.id), { status: 'sold' });
-
-      // Mark auction as paid
-      await updateDoc(doc(db, 'auctions', auction.id), {
-        paymentStatus: 'paid',
-        orderId,
-      });
+      await updateDoc(doc(db, 'auctions', auction.id), { paymentStatus: 'paid', orderId });
 
       router.push(`/orderConfirmation?orderId=${orderId}`);
     } catch (err) {
@@ -157,7 +148,6 @@ export default function AuctionCheckoutPage() {
   return (
     <div className="min-h-screen bg-background py-12 text-foreground">
       <div className="container max-w-5xl">
-        {/* Header */}
         <div className="mb-8">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
             style={{ borderColor: 'rgba(160,106,75,0.45)', background: 'rgba(160,106,75,0.10)', color: 'var(--text-primary)' }}>
@@ -168,9 +158,7 @@ export default function AuctionCheckoutPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Artwork */}
             {artwork && (
               <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
                 <h2 className="text-xl font-bold mb-4">Your Won Artwork</h2>
@@ -198,10 +186,8 @@ export default function AuctionCheckoutPage() {
               </div>
             )}
 
-            {/* Payment Methods */}
             <div className="rounded-2xl border border-border bg-card p-6 shadow-lg">
               <h2 className="text-xl font-bold mb-6">Select Payment Method</h2>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {PAYMENT_METHODS.map((method) => {
                   const active = selectedPayment === method.id;
@@ -212,44 +198,32 @@ export default function AuctionCheckoutPage() {
                       type="button"
                       className={[
                         'p-4 rounded-2xl border text-left transition hover:bg-[rgba(255,255,255,0.04)]',
-                        active
-                          ? 'border-[rgba(160,106,75,0.85)] bg-[rgba(160,106,75,0.12)]'
-                          : 'border-border bg-transparent',
+                        active ? 'border-[rgba(160,106,75,0.85)] bg-[rgba(160,106,75,0.12)]' : 'border-border bg-transparent',
                       ].join(' ')}
                     >
                       <div className="text-3xl mb-2">{method.icon}</div>
                       <div className="font-semibold text-foreground">{method.label}</div>
                       <div className="text-sm text-muted-foreground mt-1">{method.description}</div>
-                      {active && (
-                        <div className="mt-2 text-primary text-sm font-semibold">✓ Selected</div>
-                      )}
+                      {active && <div className="mt-2 text-primary text-sm font-semibold">✓ Selected</div>}
                     </button>
                   );
                 })}
               </div>
-
               <div className="mt-4 rounded-xl border border-[rgba(140,180,255,0.35)] bg-[rgba(140,180,255,0.10)] p-3">
-                <p className="text-sm text-[rgba(210,230,255,0.95)]">
-                  Select a method and place the order to continue.
-                </p>
+                <p className="text-sm text-[rgba(210,230,255,0.95)]">Select a method and place the order to continue.</p>
               </div>
             </div>
           </div>
 
-          {/* Right sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-6 rounded-2xl border border-border bg-card p-6 shadow-lg">
               <h2 className="text-xl font-bold mb-6">Order Summary</h2>
-
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm gap-3">
                   <span className="text-muted-foreground truncate flex-1">{artwork?.title}</span>
-                  <span className="font-medium text-foreground flex-shrink-0">
-                    {formatPrice(auction?.currentBid)}
-                  </span>
+                  <span className="font-medium text-foreground flex-shrink-0">{formatPrice(auction?.currentBid)}</span>
                 </div>
               </div>
-
               <div className="border-t border-border pt-4 mb-6 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -264,21 +238,16 @@ export default function AuctionCheckoutPage() {
                   <span className="text-primary">{formatPrice(auction?.currentBid)}</span>
                 </div>
               </div>
-
               {selectedMethod && (
                 <div className="rounded-xl border border-[rgba(160,106,75,0.45)] bg-[rgba(160,106,75,0.10)] p-3 mb-4">
-                  <p className="text-sm text-foreground font-semibold">
-                    {selectedMethod.icon} {selectedMethod.label}
-                  </p>
+                  <p className="text-sm text-foreground font-semibold">{selectedMethod.icon} {selectedMethod.label}</p>
                 </div>
               )}
-
               {error && (
                 <div className="rounded-xl border border-[rgba(255,120,120,0.35)] bg-[rgba(190,58,38,0.18)] px-3 py-2 mb-4 text-sm text-[rgba(255,225,225,0.95)]">
                   {error}
                 </div>
               )}
-
               <button
                 onClick={handlePlaceOrder}
                 disabled={placing || !selectedPayment}
@@ -286,11 +255,7 @@ export default function AuctionCheckoutPage() {
               >
                 {placing ? 'Placing Order…' : 'Complete Purchase'}
               </button>
-
-              <Link
-                href="/profile"
-                className="block text-center font-medium mt-4 transition text-primary hover:opacity-80 text-sm"
-              >
+              <Link href="/profile" className="block text-center font-medium mt-4 transition text-primary hover:opacity-80 text-sm">
                 ← Back to profile
               </Link>
             </div>
@@ -298,5 +263,15 @@ export default function AuctionCheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuctionCheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary" />
+    </div>}>
+      <AuctionCheckoutContent />
+    </Suspense>
   );
 }
