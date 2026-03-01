@@ -11,14 +11,38 @@ import {
 import {
   TrendingUp, DollarSign, Users, Package, Gavel, ArrowRight,
   ChevronDown, MoreVertical, Shield, UserCheck, UserX, Search,
-  RefreshCw, ExternalLink,
+  RefreshCw, ExternalLink, Download, FileText, FileSpreadsheet,
 } from 'lucide-react';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const COLORS = ['#A06A4B', '#C9A68A', '#8C5A3C', '#D4B9A3', '#6B3E26'];
 
-// ── Dropdown component ──────────────────────────────────────────────────────
+// CSV download helper
+function downloadCSV(filename, headers, rows) {
+  const escape = (v) => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
+  const csv = [
+    'sep=,',             
+    headers,
+    ...rows
+  ].map((row) => Array.isArray(row) ? row.map(escape).join(',') : row).join('\n');
+
+  const BOM = '\uFEFF';   
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Dropdown component
 function Dropdown({ label, icon: Icon, items, value, onChange, className = '' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -66,7 +90,64 @@ function Dropdown({ label, icon: Icon, items, value, onChange, className = '' })
   );
 }
 
-// ── Stat card ───────────────────────────────────────────────────────────────
+// Download button with dropdown
+function DownloadButton({ options }) {
+  const [open, setOpen] = useState(false);
+  const [downloading, setDownloading] = useState(null);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleClick = async (opt) => {
+    setDownloading(opt.label);
+    setOpen(false);
+    await new Promise((r) => setTimeout(r, 200));
+    opt.onDownload();
+    setTimeout(() => setDownloading(null), 1200);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all hover:brightness-110"
+        style={{ background: 'rgba(160,106,75,0.12)', borderColor: 'rgba(160,106,75,0.30)', color: 'var(--clay)' }}
+      >
+        <Download size={14} />
+        {downloading ? `Downloading…` : 'Download'}
+        <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-xl border shadow-xl"
+          style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+        >
+          <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+            Export as CSV
+          </p>
+          {options.map((opt) => (
+            <button
+              key={opt.label}
+              onClick={() => handleClick(opt)}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-white/5"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              <FileSpreadsheet size={14} style={{ color: 'var(--clay)' }} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Stat card
 function StatCard({ label, value, sub, icon: Icon, accent }) {
   return (
     <div
@@ -91,7 +172,7 @@ function StatCard({ label, value, sub, icon: Icon, accent }) {
   );
 }
 
-// ── Section header ──────────────────────────────────────────────────────────
+// Section header
 function SectionHeader({ title, sub, action }) {
   return (
     <div className="mb-6 flex items-end justify-between gap-4">
@@ -149,7 +230,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // ── Role management ────────────────────────────────────────────────────────
+  // Role management
   const handleRoleChange = async (userId, newRole) => {
     setUpdatingRole(userId);
     try {
@@ -170,8 +251,13 @@ export default function AdminDashboard() {
     return matchSearch && matchRole;
   });
 
-  // ── Metrics ────────────────────────────────────────────────────────────────
+  // Metrics
   const formatCurrency = (v) => new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0 }).format(v || 0);
+  const formatDate = (val) => {
+    if (!val) return '—';
+    const d = val.toDate ? val.toDate() : new Date(val);
+    return d.toLocaleDateString('en-ZA');
+  };
 
   const financial = (() => {
     const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
@@ -269,6 +355,139 @@ export default function AdminDashboard() {
 
   const liveAuctionsCount = auctions.filter((a) => a.status === 'live').length;
 
+  // Download handlers
+  const today = new Date().toISOString().slice(0, 10);
+
+  const downloadOrders = () => {
+    const headers = ['Order ID', 'Date', 'Customer Email', 'Items', 'Total (ZAR)', 'Status'];
+    const rows = orders.map((o) => [
+      o.id,
+      formatDate(o.createdAt),
+      o.userEmail || '—',
+      (o.items || []).map((i) => `${i.title} x${i.quantity || 1}`).join('; '),
+      (o.total || 0).toFixed(2),
+      o.status || '—',
+    ]);
+    downloadCSV(`curate_orders_${today}.csv`, headers, rows);
+  };
+
+  const downloadFinancialSummary = () => {
+    const headers = ['Month', 'Revenue (ZAR)', 'Profit (ZAR)'];
+    const rows = financial.monthlyChart.map((m) => [m.month, m.revenue, m.profit]);
+    // Append summary totals
+    rows.push([]);
+    rows.push(['TOTAL REVENUE', financial.totalRevenue.toFixed(2), '']);
+    rows.push(['TOTAL COGS', financial.totalCOGS.toFixed(2), '']);
+    rows.push(['GROSS PROFIT', financial.grossProfit.toFixed(2), '']);
+    rows.push(['PROFIT MARGIN', `${financial.profitMargin.toFixed(1)}%`, '']);
+    rows.push(['AVG ORDER VALUE', financial.avgOrderValue.toFixed(2), '']);
+    downloadCSV(`curate_financial_report_${today}.csv`, headers, rows);
+  };
+
+  const downloadArtworks = () => {
+    const headers = ['Artwork ID', 'Title', 'Artist', 'Style', 'Price (ZAR)', 'Status'];
+    const soldIds = new Set(orders.flatMap((o) => (o.items || []).map((i) => i.artworkId)));
+    const inAuctionIds = new Set(
+      auctions.filter((a) => a.status === 'live').map((a) => a.artworkId)
+    );
+    const rows = artworks.map((a) => [
+      a.id,
+      a.title || '—',
+      a.artist || '—',
+      a.style || '—',
+      (a.price || 0).toFixed(2),
+      soldIds.has(a.id) ? 'Sold' : inAuctionIds.has(a.id) ? 'In Auction' : 'Available',
+    ]);
+    downloadCSV(`curate_artworks_${today}.csv`, headers, rows);
+  };
+
+  const downloadTopArtworks = () => {
+    const headers = ['Rank', 'Title', 'Artist', 'Units Sold', 'Revenue (ZAR)'];
+    const rows = product.topArtworks.map((a, i) => [
+      i + 1,
+      a.title || '—',
+      a.artist || '—',
+      a.quantity,
+      a.revenue.toFixed(2),
+    ]);
+    downloadCSV(`curate_top_artworks_${today}.csv`, headers, rows);
+  };
+
+  const downloadCustomers = () => {
+    const headers = ['Name', 'Email', 'City', 'Orders', 'Total Spent (ZAR)'];
+    const customers = users.filter((u) => u.role !== 'admin');
+    const purchases = {};
+    orders.forEach((o) => {
+      const uid = o.userId;
+      if (!purchases[uid]) {
+        const c = customers.find((u) => u.id === uid);
+        purchases[uid] = {
+          name: c?.name || c?.displayName || c?.email || o.userEmail || 'Unknown',
+          email: c?.email || o.userEmail || '',
+          city: c?.address?.city || '—',
+          orders: 0, totalSpent: 0,
+        };
+      }
+      purchases[uid].orders += 1;
+      purchases[uid].totalSpent += o.total || 0;
+    });
+    const rows = Object.values(purchases)
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .map((c) => [c.name, c.email, c.city, c.orders, c.totalSpent.toFixed(2)]);
+    downloadCSV(`curate_customers_${today}.csv`, headers, rows);
+  };
+
+  const downloadUsers = () => {
+    const headers = ['Name', 'Email', 'Role', 'Joined'];
+    const rows = users.map((u) => [
+      u.name || u.displayName || '—',
+      u.email || '—',
+      u.role || 'customer',
+      formatDate(u.createdAt),
+    ]);
+    downloadCSV(`curate_users_${today}.csv`, headers, rows);
+  };
+
+  const downloadAuctions = () => {
+    const headers = ['Auction ID', 'Artwork ID', 'Status', 'Start Price (ZAR)', 'Current Bid (ZAR)', 'End Date'];
+    const rows = auctions.map((a) => [
+      a.id,
+      a.artworkId || '—',
+      a.status || '—',
+      (a.startPrice || 0).toFixed(2),
+      (a.currentBid || a.startPrice || 0).toFixed(2),
+      formatDate(a.endDate),
+    ]);
+    downloadCSV(`curate_auctions_${today}.csv`, headers, rows);
+  };
+
+  // Download options per view
+  const overviewDownloadOptions = [
+    { label: 'Orders Report', onDownload: downloadOrders },
+    { label: 'Financial Summary', onDownload: downloadFinancialSummary },
+    { label: 'Top Artworks', onDownload: downloadTopArtworks },
+    { label: 'Top Customers', onDownload: downloadCustomers },
+  ];
+
+  const financialDownloadOptions = [
+    { label: 'Monthly Revenue & Profit', onDownload: downloadFinancialSummary },
+    { label: 'Full Orders List', onDownload: downloadOrders },
+  ];
+
+  const productsDownloadOptions = [
+    { label: 'All Artworks', onDownload: downloadArtworks },
+    { label: 'Top Selling Artworks', onDownload: downloadTopArtworks },
+    { label: 'Auctions Report', onDownload: downloadAuctions },
+  ];
+
+  const customersDownloadOptions = [
+    { label: 'All Customers', onDownload: downloadCustomers },
+  ];
+
+  const usersDownloadOptions = [
+    { label: 'All Users', onDownload: downloadUsers },
+  ];
+
   const viewItems = [
     { value: 'overview', label: 'Overview' },
     { value: 'analytics', label: 'Analytics' },
@@ -321,6 +540,9 @@ export default function AdminDashboard() {
               <RefreshCw size={14} />
               Refresh
             </button>
+            {/* Download button — contextual per view */}
+            {activeView === 'overview' && <DownloadButton options={overviewDownloadOptions} />}
+            {activeView === 'users' && <DownloadButton options={usersDownloadOptions} />}
           </div>
         </div>
 
@@ -398,6 +620,10 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div className="flex items-center gap-2">
               <Dropdown label="Tab" items={analyticsItems} value={analyticsTab} onChange={setAnalyticsTab} />
+              {/* Contextual download for analytics sub-tabs */}
+              {analyticsTab === 'financial' && <DownloadButton options={financialDownloadOptions} />}
+              {analyticsTab === 'products' && <DownloadButton options={productsDownloadOptions} />}
+              {analyticsTab === 'customers' && <DownloadButton options={customersDownloadOptions} />}
             </div>
 
             {/* Financial */}
@@ -668,7 +894,7 @@ export default function AdminDashboard() {
                   <UserCheck size={12} style={{ color: 'var(--clay)' }} />
                   Promote to admin
                 </div>
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }} >
                   <UserX size={12} style={{ color: '#BE3A26' }} />
                   Demote to customer
                 </div>

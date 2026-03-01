@@ -68,7 +68,6 @@ const features = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
 function HeroSlideshow() {
   const [current, setCurrent] = useState(0);
 
@@ -174,7 +173,6 @@ function HeroSlideshow() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function SearchSection({
   liveAuctionCount,
   hasResults,
@@ -247,7 +245,7 @@ function SearchSection({
           )}
         </div>
 
-        {/* Row 1: Text search + image upload */}
+        {/* Text search + image upload */}
         <div className="flex flex-col gap-3 md:flex-row md:flex-nowrap md:items-center">
 
           {/* Text search */}
@@ -350,7 +348,7 @@ function SearchSection({
           </div>
         </div>
 
-        {/* Row 2: Filters — only visible after a search has been performed */}
+        {/* Filters — only visible after a search has been performed */}
         {hasResults && <div className="mt-4 flex flex-wrap items-center gap-2">
           <select
             value={filterStyle}
@@ -439,7 +437,6 @@ function SearchSection({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function WhyChooseSection() {
   return (
     <section
@@ -485,7 +482,6 @@ function WhyChooseSection() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { addToCart } = useCart();
   const [artworks, setArtworks] = useState([]);
@@ -528,7 +524,7 @@ export default function Home() {
     });
   }, [artworks, auctions]);
 
-  // ✅ Derive styles and mediums from purchasable artworks
+  // Derive styles and mediums from purchasable artworks
   const styles = useMemo(
     () => [...new Set(purchasableArtworks.map((a) => a.style).filter(Boolean))],
     [purchasableArtworks]
@@ -611,7 +607,7 @@ export default function Home() {
     }
   };
 
-  // ✅ Clear search AND filters together
+  // Clear search AND filters together
   const clearSearch = () => {
     setSearchResults(null);
     setImageFile(null);

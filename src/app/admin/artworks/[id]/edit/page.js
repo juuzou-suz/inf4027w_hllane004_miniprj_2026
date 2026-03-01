@@ -95,13 +95,13 @@ export default function EditArtworkPage() {
 
         if (!trimmed.startsWith('/Images/')) {
           setError('Image path must start with /Images/');
-          setSaving(false); // ✅ FIX: was setLoading(false)
+          setSaving(false); 
           return;
         }
 
         if (!/\.(jpg|jpeg|png|webp)$/i.test(trimmed)) {
           setError('Image must be .jpg, .jpeg, .png or .webp');
-          setSaving(false); // ✅ FIX: was setLoading(false)
+          setSaving(false); 
           return;
         }
       }
@@ -357,7 +357,7 @@ export default function EditArtworkPage() {
   );
 }
 
-/* ---------- Small UI helpers (same style as /new) ---------- */
+/* Small UI helpers */
 
 function Field({ label, required, className = '', children }) {
   return (

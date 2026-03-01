@@ -11,7 +11,7 @@ const TERMINAL_STATUSES = ['cancelled', 'completed'];
 export function getAuctionStatus(auction) {
   if (!auction) return 'ended';
 
-  // ✅ Never overwrite a terminal status with a time-based one
+  // Never overwrite a terminal status with a time-based one
   if (TERMINAL_STATUSES.includes(auction.status)) {
     return auction.status;
   }
@@ -34,7 +34,7 @@ export function getAuctionStatus(auction) {
  * Will not touch auctions in a terminal status.
  */
 export async function updateAuctionStatusIfNeeded(auctionId, auction) {
-  // ✅ Never touch a cancelled or completed auction
+  // Never touch a cancelled or completed auction
   if (TERMINAL_STATUSES.includes(auction.status)) {
     return auction.status;
   }

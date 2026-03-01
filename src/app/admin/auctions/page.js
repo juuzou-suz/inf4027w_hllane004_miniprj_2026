@@ -27,9 +27,6 @@ export default function AdminAuctionsPage() {
     minimumIncrement: '10',
   });
 
-  // ✅ FIX: Use a ref for the interval so it is set up once and never re-registers.
-  // The old code used `auctions.length` as a dependency which caused the interval
-  // to be torn down and recreated on every auction state change, triggering re-renders.
   const auctionsRef = useRef([]);
   auctionsRef.current = auctions;
 
@@ -62,7 +59,7 @@ export default function AdminAuctionsPage() {
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ← runs once only
+  }, []); 
 
   const fetchData = async () => {
     try {
@@ -326,7 +323,7 @@ export default function AdminAuctionsPage() {
         </div>
       )}
 
-      {/* ── Create auction modal ────────────────────────────────────────────── */}
+      {/* Create auction modal */}
       {showCreateForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
           style={{ background: 'rgba(0,0,0,0.70)' }}>
@@ -353,7 +350,7 @@ export default function AdminAuctionsPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Artwork dropdown — white bg so native option text is always black/readable */}
+              {/* Artwork dropdown */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-widest mb-2"
                   style={{ color: 'var(--text-muted)' }}>
@@ -361,8 +358,7 @@ export default function AdminAuctionsPage() {
                 </label>
                 <select name="artworkId" value={formData.artworkId} onChange={handleChange} required
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-                  style={{ background: '#ffffff', border: '1px solid rgba(255,255,255,0.10)', color: '#111111' }}>
-                  {/* ✅ White background forces browser to render option text in black on all OS/browsers */}
+                  style={{ color: 'var(--text-muted)' }}>
                   <option value="" style={{ color: '#111111', background: '#ffffff' }}>Choose an artwork…</option>
                   {availableArtworks.map((artwork) => (
                     <option key={artwork.id} value={artwork.id}
@@ -434,7 +430,7 @@ export default function AdminAuctionsPage() {
         </div>
       )}
 
-      {/* ── Cancel confirmation modal ───────────────────────────────────────── */}
+      {/* Cancel confirmation modal */}
       {cancelConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
           style={{ background: 'rgba(0,0,0,0.65)' }}>
@@ -473,7 +469,7 @@ export default function AdminAuctionsPage() {
         </div>
       )}
 
-      {/* ── Details modal ───────────────────────────────────────────────────── */}
+      {/* Details modal */}
       {detailsAuction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
           style={{ background: 'rgba(0,0,0,0.65)' }}>

@@ -95,9 +95,7 @@ export default function AdminOrdersPage() {
 
   const statusPill = (status) => {
     const s = (status || '').toLowerCase();
-
-    // You currently set status to "completed" in checkout.
-    // Still handle generic states safely.
+    
     const map = {
       completed: { bg: 'rgba(58, 122, 87, 0.14)', bd: 'rgba(58, 122, 87, 0.22)', fg: 'rgba(220, 255, 235, 0.95)' },
       pending: { bg: 'rgba(167, 107, 17, 0.14)', bd: 'rgba(167, 107, 17, 0.22)', fg: 'rgba(255, 235, 205, 0.95)' },

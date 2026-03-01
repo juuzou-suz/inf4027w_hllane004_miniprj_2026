@@ -102,19 +102,6 @@ function FiltersBar({
               className="h-[42px] w-28 rounded-md border border-border px-3 text-sm outline-none
                          bg-card text-foreground placeholder:text-muted-foreground/70"
             />
-
-            {/* Optional toggle exists in state; if you later add UI, keep this style */}
-            {/* Example:
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={filterAvailable}
-                onChange={(e) => onFilterAvailable(e.target.checked)}
-              />
-              Available only
-            </label>
-            */}
-
             {hasSearch && (
               <button
                 onClick={onClearSearch}

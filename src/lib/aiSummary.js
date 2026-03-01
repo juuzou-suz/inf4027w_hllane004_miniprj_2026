@@ -1,6 +1,3 @@
-// src/lib/aiSummary.js
-// Generate detailed AI-powered artwork summaries using Gemini
-
 export async function generateArtworkSummary(artwork) {
   try {
     if (!artwork) {

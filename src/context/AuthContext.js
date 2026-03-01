@@ -8,19 +8,21 @@ import { getUserById, upsertUser } from '@/lib/firestore';
 const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); // enriched app user (auth + firestore)
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // Prevents UI flicker on first load
 
   useEffect(() => {
+  
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
+        // No active session — clear the user and stop loading
         if (!firebaseUser) {
           setUser(null);
           setLoading(false);
           return;
         }
 
-        // 1) Get Firestore user profile (may be missing for older accounts)
+        // Attempt to fetch the user's extended profile from Firestore
         let userData = null;
         try {
           userData = await getUserById(firebaseUser.uid);
@@ -28,19 +30,19 @@ export function AuthProvider({ children }) {
           console.error('Error fetching user data:', err);
         }
 
-        // 2) If missing, create/merge a baseline document so future reads always work
+        // First-time sign-in: no Firestore document exists yet.
+        // Create a baseline profile so every user always has a complete record.
         if (!userData) {
           const baseline = {
             email: firebaseUser.email || '',
-            role: 'customer',
+            role: 'customer',           // Default role for all new users
             name: firebaseUser.displayName || '',
-            // optional profile fields (safe defaults)
             address: {
               street: '',
               city: '',
               postalCode: '',
             },
-            createdAt: new Date(), // ok for baseline; server-side timestamps should be set in registration ideally
+            createdAt: new Date(),
           };
 
           try {
@@ -51,26 +53,21 @@ export function AuthProvider({ children }) {
           }
         }
 
-        // 3) Build the enriched user object used across the app
         const enrichedUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email || userData?.email || '',
           displayName: firebaseUser.displayName || userData?.name || '',
           role: userData?.role || 'customer',
-
-          // Firestore profile fields you’ll actually use
           name: userData?.name || firebaseUser.displayName || '',
           address: userData?.address || { street: '', city: '', postalCode: '' },
-
-          // include anything else you store on the user doc
           ...userData,
         };
 
         setUser(enrichedUser);
+
       } catch (error) {
         console.error('AuthContext error:', error);
 
-        // fallback: still allow app to run
         if (auth.currentUser) {
           setUser({
             uid: auth.currentUser.uid,
@@ -88,6 +85,7 @@ export function AuthProvider({ children }) {
       }
     });
 
+    // Clean up the Firebase listener when the AuthProvider unmounts
     return () => unsubscribe();
   }, []);
 
@@ -109,13 +107,15 @@ export function AuthProvider({ children }) {
     loading,
     logout,
 
-    // Optional helper: refresh user profile after saving profile edits
+    // refreshUser re-fetches the Firestore profile and merges it into the current user state.
     refreshUser: async () => {
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) return;
 
       try {
         const userData = await getUserById(firebaseUser.uid);
+
+        // Merge fresh Firestore data over the existing state, preserving any fields that Firestore doesn't store (e.g. uid from Firebase Auth)
         setUser((prev) => ({
           ...(prev || {}),
           ...userData,
@@ -139,6 +139,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Custom hook — enforces that useAuth is only called inside an AuthProvider
 export function useAuth() {
   const context = useContext(AuthContext);
 

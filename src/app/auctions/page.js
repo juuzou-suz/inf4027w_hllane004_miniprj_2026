@@ -9,9 +9,9 @@ export default function AuctionsPage() {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all'); // all, live, upcoming, ended, cancelled
+  const [filter, setFilter] = useState('all'); 
 
-  // ---------- Helpers ----------
+  // Helpers 
   const formatPrice = (price) =>
     new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -78,14 +78,12 @@ export default function AuctionsPage() {
     );
   };
 
-  // ---------- Fetch ----------
+  // Fetch 
   const fetchAuctions = async () => {
     try {
       setLoading(true);
       const data = await getAllAuctions();
 
-      // Compute correct statuses immediately for UI
-      // Don't override "cancelled" status - respect it if set by admin
       const withStatus = data.map((a) => {
         if (a.status === 'cancelled') {
           return { ...a, status: 'cancelled' };
@@ -95,7 +93,6 @@ export default function AuctionsPage() {
       
       setAuctions(withStatus);
 
-      // Update db if needed (but never change cancelled to something else)
       for (const a of withStatus) {
         const original = data.find((x) => x.id === a.id);
         if (original && original.status !== a.status && original.status !== 'cancelled') {
@@ -116,7 +113,7 @@ export default function AuctionsPage() {
     fetchAuctions();
   }, []);
 
-  // ---------- Status poll (safe) ----------
+  // Status poll
   useEffect(() => {
     if (!auctions.length) return;
 
@@ -151,7 +148,7 @@ export default function AuctionsPage() {
     return () => clearInterval(interval);
   }, [auctions.length]);
 
-  // ---------- Filtered list ----------
+  // Filtered list
   const filteredAuctions = useMemo(() => {
     return auctions.filter((a) => (filter === 'all' ? true : a.status === filter));
   }, [auctions, filter]);
@@ -167,7 +164,7 @@ export default function AuctionsPage() {
     return c;
   }, [auctions]);
 
-  // ---------- UI ----------
+  // UI 
   const Chip = ({ value, label, count }) => {
     const active = filter === value;
 
@@ -292,7 +289,7 @@ export default function AuctionsPage() {
                         {badge(auction.status)}
                       </div>
 
-                      {/* Bid box - only show if not cancelled */}
+                      {/* Bid box */}
                       {auction.status !== 'cancelled' && (
                         <div className="mt-5 rounded-2xl border border-border p-4 bg-[rgba(255,255,255,0.04)]">
                           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

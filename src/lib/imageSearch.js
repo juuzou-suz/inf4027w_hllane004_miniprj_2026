@@ -65,13 +65,13 @@ export async function searchArtworksByImage(imageFile, artworks) {
 
     const { analysis } = data;
 
-    // ✅ Score all artworks
+    // Score all artworks
     const scored = artworks
       .map((artwork) => ({ ...artwork, _score: scoreArtwork(artwork, analysis) }))
       .filter((a) => a._score > 0)
       .sort((a, b) => b._score - a._score);
 
-    // ✅ Only keep results above a meaningful threshold
+    // Only keep results above a meaningful threshold
     // Use top score as baseline — only show artworks within 60% of the best match
     const topScore = scored[0]?._score ?? 0;
     const MIN_ABSOLUTE_SCORE = 3;   // must have at least one strong match

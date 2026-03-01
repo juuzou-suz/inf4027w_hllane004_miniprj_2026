@@ -16,7 +16,6 @@ export default function ArtworkCard({ artwork, auction, onAddToCart }) {
   const isInAuction = auction && (auction.status === "live" || auction.status === "upcoming");
   const href = isInAuction ? `/auctions/${auction.id}` : `/artworks/${artwork.id}`;
 
-  // Use a consistent, premium-friendly currency format across the UI.
   const formatPrice = (value) =>
     new Intl.NumberFormat("en-ZA", {
       style: "currency",
@@ -78,7 +77,6 @@ export default function ArtworkCard({ artwork, auction, onAddToCart }) {
         await refreshUser();
       }
     } catch (err) {
-      // Keep user-facing UI calm; log for developers.
       console.error("Wishlist update failed:", err);
     } finally {
       setWishWorking(false);

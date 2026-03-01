@@ -23,7 +23,6 @@ export default function AdminArtworksPage() {
       setLoading(true);
       const data = await getAllArtworks();
 
-      // Auto-fix stale sold statuses by cross-checking against orders
       const ordersSnap = await getDocs(collection(db, 'orders'));
       const soldArtworkIds = new Set();
       ordersSnap.docs.forEach((orderDoc) => {
@@ -38,7 +37,7 @@ export default function AdminArtworksPage() {
       data.forEach((artwork) => {
         if (artwork.status === 'sold' && !soldArtworkIds.has(artwork.id)) {
           batch.update(doc(db, 'artworks', artwork.id), { status: 'available' });
-          artwork.status = 'available'; // update local copy immediately
+          artwork.status = 'available'; 
           resetCount++;
         }
       });

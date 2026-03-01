@@ -75,7 +75,7 @@ export function useNotifications() {
   return useContext(NotificationContext);
 }
 
-// ── Toast UI ─────────────────────────────────────────────────────────────────
+// Toast UI
 function NotificationToasts({ notifications, dismiss }) {
   if (notifications.length === 0) return null;
 

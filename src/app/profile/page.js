@@ -350,7 +350,7 @@ export default function ProfilePage() {
         <div className="mt-6 border-t border-border" />
 
         <div className="mt-8">
-          {/* ===== Personal Details ===== */}
+          {/* Personal Details */}
           {activeTab === 'details' && (
             <div className="mx-auto max-w-2xl">
               <form
@@ -435,7 +435,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ===== Order History ===== */}
+          {/* Order History */}
           {activeTab === 'orders' && (
             <div className="mx-auto max-w-2xl rounded-2xl bg-card p-6 md:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
               <h2 className="font-display text-xl font-black text-foreground">Order history</h2>
@@ -495,7 +495,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ===== Active Bids ===== */}
+          {/* Active Bids */}
           {activeTab === 'bids' && (
             <div className="mx-auto max-w-2xl rounded-2xl bg-card p-6 md:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
               <h2 className="font-display text-xl font-black text-foreground">Active bids</h2>
@@ -540,7 +540,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ===== Won Auctions ===== */}
+          {/* Won Auctions */}
           {activeTab === 'won' && (
             <div className="mx-auto max-w-2xl rounded-2xl bg-card p-6 md:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
               <h2 className="font-display text-xl font-black text-foreground">Won auctions</h2>
@@ -639,7 +639,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ===== Wishlist ===== */}
+          {/* Wishlist */}
           {activeTab === 'wishlist' && (
             <div className="mx-auto max-w-2xl rounded-2xl bg-card p-6 md:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
               <h2 className="font-display text-xl font-black text-foreground">Wishlist</h2>

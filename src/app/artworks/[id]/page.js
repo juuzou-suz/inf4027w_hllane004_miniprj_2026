@@ -66,7 +66,6 @@ export default function ArtworkDetailPage() {
 
     const handleGenerateSummary = async () => {
     if (summary) {
-      // If already generated, just show it
       setShowSummary(true);
       return;
     }
@@ -171,7 +170,7 @@ export default function ArtworkDetailPage() {
           <div>
             <h1 className="font-display text-4xl font-black mb-2">{artwork.title}</h1>
             <p className="text-lg text-muted-foreground mb-6">by {artwork.artist}</p>
-{/* AI Summary Button */}
+            {/* AI Summary Button */}
             <button
               onClick={handleGenerateSummary}
               disabled={summaryLoading}
@@ -249,8 +248,8 @@ export default function ArtworkDetailPage() {
 
                 {artwork.yearCreated && <DetailRow label="Year" value={artwork.yearCreated} />}
                 {artwork.price != null && artwork.price !== '' && (
-  <DetailRow label="Price" value={formatPrice(Number(artwork.price))} />
-)}
+                <DetailRow label="Price" value={formatPrice(Number(artwork.price))} />
+                )}
               </div>
             </div>
 

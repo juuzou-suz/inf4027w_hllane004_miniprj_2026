@@ -42,7 +42,7 @@ export default function AdminLayout({ children }) {
       <aside
         className="w-72 min-h-screen fixed top-0 left-0 z-40 bg-card flex flex-col"
         style={{
-          boxShadow: '0 0 30px rgba(0,0,0,0.15)', // subtle depth
+          boxShadow: '0 0 30px rgba(0,0,0,0.15)',
         }}
       >
         {/* Brand */}

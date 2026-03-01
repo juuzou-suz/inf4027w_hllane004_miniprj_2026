@@ -105,7 +105,7 @@ export default function NewArtworkPage() {
         }
       }
 
-      // Create embedding (don’t block save if it fails)
+      // Create embedding 
       const embeddingText = buildEmbeddingText(formData);
       let textEmbedding = null;
 
@@ -141,7 +141,7 @@ export default function NewArtworkPage() {
         createdBy: user?.uid || null,
         viewCount: 0,
 
-        // ✅ Hugging Face embedding fields
+        // Hugging Face embedding fields
         embeddingText,
         textEmbedding,
         embeddingModel: 'sentence-transformers/all-MiniLM-L6-v2',
@@ -301,7 +301,7 @@ export default function NewArtworkPage() {
   );
 }
 
-/* ---------- Small UI helpers ---------- */
+/* Small UI helpers */
 
 function Field({ label, required, className = '', children }) {
   return (
