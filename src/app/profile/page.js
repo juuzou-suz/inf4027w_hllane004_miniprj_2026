@@ -118,7 +118,7 @@ export default function ProfilePage() {
       .finally(() => setWonArtworksLoading(false));
   }, [auctions, user?.uid]);
 
-  // Fetch wishlist artworks
+  // Fetch wishlist artworks 
   useEffect(() => {
     if (!user?.wishlist || !Array.isArray(user.wishlist)) {
       setWishlistArtworks([]);
