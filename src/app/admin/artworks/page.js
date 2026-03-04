@@ -243,13 +243,8 @@ export default function AdminArtworksPage() {
 
                     <td className="px-6 py-4">
                       <div className="font-semibold text-foreground">
-                        {formatPrice(artwork.currentBid || artwork.startingBid || artwork.price || 0)}
+                        {formatPrice(artwork.price || 0)}
                       </div>
-                      {!!artwork.currentBid && (
-                        <div className="text-xs text-muted-foreground">
-                          Starting: {formatPrice(artwork.startingBid || 0)}
-                        </div>
-                      )}
                     </td>
 
                     <td className="px-6 py-4">
